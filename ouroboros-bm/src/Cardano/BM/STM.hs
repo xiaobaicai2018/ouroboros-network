@@ -10,14 +10,16 @@ import qualified Control.Monad.STM as STM
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 import           Data.Text
-import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import           Data.Time.Units (Microsecond, fromMicroseconds)
+
+import           GHC.Clock (getMonotonicTimeNSec)
+import           GHC.Word (Word64)
 
 import           Cardano.BM.Trace (TraceNamed, appendName, logDebug, logInfo,
                      logObservable)
 
-nominalDiffTimeToMicroseconds :: POSIXTime -> Microsecond
-nominalDiffTimeToMicroseconds = fromMicroseconds . round . (* 1000000)
+nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
+nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 
 {-# NOINLINE measure_atomically #-}
 -- atomically :: STM a -> IO a
@@ -26,17 +28,17 @@ measure_atomically logTrace0 name stm = do
     logTrace1 <- liftIO $ STM.atomically $ STM.readTVar logTrace0
     let logTrace = appendName name logTrace1
     logDebug logTrace $ "entering " <> name
-    tstart <- liftIO getPOSIXTime
+    tstart <- liftIO getMonotonicTimeNSec
     res <- liftIO $ STM.atomically stm
-    tend <- liftIO getPOSIXTime
+    tend <- liftIO getMonotonicTimeNSec
     logDebug logTrace $ "leaving " <> name
     let tdiff = nominalDiffTimeToMicroseconds (tend - tstart)
     liftIO $ STM.atomically $ STM.modifyTVar logTrace0 (\ltr -> logObservable ltr name (fromIntegral tdiff))
     logTrace' <- liftIO $ STM.atomically $ STM.readTVar logTrace0
-    logInfo logTrace' $ "eval of " <> name <> " took " <> l(show tdiff)
+    logInfo logTrace' $ "eval of " <> name <> " took " <> t_(show tdiff)
     return res
 
   where
-    l = pack
+    t_ = pack
 
 

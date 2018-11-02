@@ -30,7 +30,6 @@ library
                        mtl,
                        stm,
                        text,
-                       time,
                        time-units,
                        transformers,
                        unordered-containers
