@@ -111,6 +111,7 @@ library
                        hashable     >=1.2 && <1.3,
                        memory       >=0.14 && <0.15,
                        mtl,
+                       ouroboros-bm,
                        process,
                        psqueues     >=0.2 && <0.3,
                        random       >=1.1 && <1.2,

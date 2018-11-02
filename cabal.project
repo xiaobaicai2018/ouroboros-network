@@ -1,4 +1,4 @@
-packages: .
+packages: . ouroboros-bm/ouroboros-bm.cabal
 
 package ouroboros-network
   tests: True

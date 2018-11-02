@@ -20,9 +20,11 @@ module Ouroboros.Network.MonadClass.MonadSTM
   , isEmptyTMVarDefault
   ) where
 
-import qualified Control.Concurrent.STM.TVar    as STM
-import qualified Control.Concurrent.STM.TMVar   as STM
-import qualified Control.Monad.STM              as STM
+import qualified Control.Concurrent.STM.TMVar as STM
+import qualified Control.Concurrent.STM.TVar as STM
+import qualified Control.Monad.STM as STM
+
+import           Data.Text (Text)
 
 import           Ouroboros.Network.MonadClass.MonadFork
 
@@ -174,7 +176,7 @@ swapTMVarDefault :: MonadSTM m => TMVarDefault m a -> a -> Tr m a
 swapTMVarDefault (TMVar t) new = do
   m <- readTVar t
   case m of
-    Nothing -> retry
+    Nothing  -> retry
     Just old -> do writeTVar t (Just new); return old
 
 isEmptyTMVarDefault :: MonadSTM m => TMVarDefault m a -> Tr m Bool

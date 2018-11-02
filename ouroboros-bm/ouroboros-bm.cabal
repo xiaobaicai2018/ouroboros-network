@@ -1,0 +1,55 @@
+name:                ouroboros-bm
+version:             0.1.0.0
+synopsis:            benchmarking framework
+-- description:
+license-file:        LICENSE
+author:              Alexander Diemand, Andreas Triantafyllos
+maintainer:
+copyright:           2018 IOHK
+category:            Benchmarking
+build-type:          Simple
+extra-source-files:  CHANGELOG.md, README.md
+cabal-version:       >=1.10
+
+library
+  hs-source-dirs:      src
+  -- At this experiment/prototype stage everything is exposed.
+  -- This has to be tidied up once the design becomes clear.
+  exposed-modules:
+                       Cardano.BM.STM
+                       Cardano.BM.Trace
+  other-modules:
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
+  other-extensions:    OverloadedStrings
+  build-depends:       base,
+                       array,
+                       bytestring,
+                       clock,
+                       contravariant,
+                       mtl,
+                       stm,
+                       text,
+                       time,
+                       time-units,
+                       transformers,
+                       unordered-containers
+
+  ghc-options:         -Wall
+                       -fno-ignore-asserts
+
+test-suite tests
+  buildable:           False
+
+  type:                exitcode-stdio-1.0
+  hs-source-dirs:      test
+  main-is:             Main.hs
+  other-modules:
+  default-language:    Haskell2010
+  default-extensions:  OverloadedStrings
+  build-depends:       base,
+                       ouroboros-network,
+                       ouroboros-bm,
+                       QuickCheck
+
+  ghc-options:         -Wall

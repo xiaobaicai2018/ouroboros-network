@@ -5,6 +5,7 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
 {-# LANGUAGE NamedFieldPuns             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE TypeApplications           #-}
@@ -24,17 +25,21 @@ import           Prelude hiding (read)
 import           Data.OrdPSQ (OrdPSQ)
 import qualified Data.OrdPSQ as PSQ
 
-import qualified Data.List as L
 import           Data.Fixed (Micro)
+import qualified Data.List as L
 import           Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 
+import qualified Control.Concurrent.STM.TVar as STM
+import qualified Control.Monad.STM as STM
+
 import           Control.Exception (assert)
 import           Control.Monad
 import           Control.Monad.Free (Free)
 import           Control.Monad.Free as Free
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import           Control.Monad.ST.Lazy
 import           Data.STRef.Lazy
 
@@ -44,7 +49,9 @@ import           Ouroboros.Network.MonadClass.MonadSTM hiding (TVar)
 import qualified Ouroboros.Network.MonadClass.MonadSTM as MonadSTM
 import           Ouroboros.Network.MonadClass.MonadTimer
 
-{-# ANN module "HLint: ignore Use readTVarIO" #-}
+import           Cardano.BM.Trace
+
+{-# ANN module ("HLint: ignore Use readTVarIO"::String) #-}
 
 
 --
@@ -98,11 +105,11 @@ instance TimeMeasure VTime where
   zero = VTime 0
 
 instance Functor (SimF s) where
-  fmap _ (Fail f)         = Fail f
-  fmap f (Say s b)        = Say s $ f b
-  fmap f (Output p o b)   = Output p o $ f b
-  fmap f (Fork s b)       = Fork s $ f b
-  fmap f (Atomically a k) = Atomically a (f . k)
+  fmap _ (Fail f)              = Fail f
+  fmap f (Say s b)             = Say s $ f b
+  fmap f (Output p o b)        = Output p o $ f b
+  fmap f (Fork s b)            = Fork s $ f b
+  fmap f (Atomically a k)      = Atomically a (f . k)
   fmap f (NewTimeout      d b) = NewTimeout      d (f . b)
   fmap f (UpdateTimeout t d b) = UpdateTimeout t d (f b)
   fmap f (CancelTimeout t   b) = CancelTimeout t   (f b)
