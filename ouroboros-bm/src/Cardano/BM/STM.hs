@@ -6,16 +6,16 @@ module Cardano.BM.STM
     ) where
 
 import qualified Control.Concurrent.STM.TVar as STM
-import           Control.Monad.IO.Class      (MonadIO, liftIO)
-import qualified Control.Monad.STM           as STM
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Control.Monad.STM as STM
 
-import           Data.Monoid                 ((<>))
+import           Data.Monoid ((<>))
 import           Data.Text
-import           Data.Time.Clock.POSIX       (POSIXTime, getPOSIXTime)
-import           Data.Time.Units             (Microsecond, fromMicroseconds)
+import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
+import           Data.Time.Units (Microsecond, fromMicroseconds)
 
-import           Cardano.BM.Trace            (TraceNamed, appendName, logDebug,
-                                              logInfo, logObservable)
+import           Cardano.BM.Trace (TraceNamed, appendName, logDebug, logInfo,
+                     logObservable)
 
 nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)

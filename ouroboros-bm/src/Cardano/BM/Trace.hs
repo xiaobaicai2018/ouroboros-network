@@ -23,21 +23,21 @@ module Cardano.BM.Trace
     ) where
 
 
-import           Control.Concurrent.MVar     (MVar, newMVar, withMVar)
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 
 import qualified Control.Concurrent.STM.TVar as STM
-import           Control.Monad               (forM_)
-import qualified Control.Monad.STM           as STM
+import           Control.Monad (forM_)
+import qualified Control.Monad.STM as STM
 
-import           Data.Functor.Contravariant  (Contravariant (..), Op (..))
-import           Data.Monoid                 ((<>))
-import           Data.Text                   (Text, pack)
-import qualified Data.Text.IO                as TIO
-import           Data.Time.Clock.POSIX       (POSIXTime, getPOSIXTime)
-import           Data.Time.Units             (Microsecond, fromMicroseconds)
-import           Data.Unique                 (Unique, hashUnique, newUnique)
+import           Data.Functor.Contravariant (Contravariant (..), Op (..))
+import           Data.Monoid ((<>))
+import           Data.Text (Text, pack)
+import qualified Data.Text.IO as TIO
+import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
+import           Data.Time.Units (Microsecond, fromMicroseconds)
+import           Data.Unique (Unique, hashUnique, newUnique)
 
-import           System.IO.Unsafe            (unsafePerformIO)
+import           System.IO.Unsafe (unsafePerformIO)
 
 
 -- | base Trace
