@@ -1,3 +1,4 @@
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
@@ -5,31 +6,38 @@ module Cardano.BM.Trace
     (
       TraceNamed
     , stdoutTrace
-    , aggregateTrace
+    -- , aggregateTrace
     -- * context naming
     , appendName
     , modifyName
     -- * utils
     , natTrace
     -- * log functions
-    , logObservable
     , logMessage, logMessageS, logMessageP
     , logDebug,   logDebugS,   logDebugP,   logDebugUnsafeP
     , logError,   logErrorS,   logErrorP,   logErrorUnsafeP
     , logInfo,    logInfoS,    logInfoP,    logInfoUnsafeP
     , logNotice,  logNoticeS,  logNoticeP,  logNoticeUnsafeP
     , logWarning, logWarningS, logWarningP, logWarningUnsafeP
+    , example
     ) where
 
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import           Control.Concurrent.MVar     (MVar, newMVar, withMVar)
 
-import           Data.Functor.Contravariant (Contravariant (..), Op (..))
-import           Data.HashMap.Lazy (HashMap, alter)
-import           Data.Text (Text, pack)
-import qualified Data.Text.IO as TIO
+import qualified Control.Concurrent.STM.TVar as STM
+import           Control.Monad               (forM_)
+import qualified Control.Monad.STM           as STM
 
-import           System.IO.Unsafe (unsafePerformIO)
+import           Data.Functor.Contravariant  (Contravariant (..), Op (..))
+import           Data.Monoid                 ((<>))
+import           Data.Text                   (Text, pack)
+import qualified Data.Text.IO                as TIO
+import           Data.Time.Clock.POSIX       (POSIXTime, getPOSIXTime)
+import           Data.Time.Units             (Microsecond, fromMicroseconds)
+import           Data.Unique                 (Unique, hashUnique, newUnique)
+
+import           System.IO.Unsafe            (unsafePerformIO)
 
 
 -- | base Trace
@@ -37,17 +45,17 @@ newtype Trace m s = Trace
     { runTrace :: Op (m ()) s
     }
 
-type TraceNamed m = Trace m (LogNamed LogItem)
+type TraceNamed m = Trace m (LogNamed LogObject)
 
 type LoggerName = Text
 
 data Aggregation = Aggregation {
-    fmin :: Integer,
-    fmax :: Integer,
-    fmean :: Integer,
+    fmin   :: Integer,
+    fmax   :: Integer,
+    fmean  :: Integer,
     fcount :: Integer,
-    fsumA :: Integer,  -- TODO 
-    fsumB :: Integer   -- TODO
+    fsumA  :: Integer,  -- TODO
+    fsumB  :: Integer   -- TODO
     } deriving (Show)
 
 updateAggregation :: Integer -> Maybe Aggregation -> Maybe Aggregation
@@ -67,11 +75,10 @@ updateAggregation v (Just (Aggregation _min _max _mean _count _sumA _sumB)) =
                 , fcount=(_count + 1)
                 , fsumA=(_sumA + v)
                 , fsumB=(_sumB + v * v) }
-                 
+
 -- | Attach a 'LoggerName' to something.
 data LogNamed item = LogNamed
     { lnName :: [LoggerName]
-    , lnAggregation :: HashMap [LoggerName] Aggregation
     , lnItem :: item
     } deriving (Show)
 
@@ -90,9 +97,9 @@ data Severity = Debug | Info | Warning | Notice | Error
 
 -- | log item
 data LogItem = LogItem
-    { liSelection  :: LogSelection
-    , liSeverity   :: Severity
-    , liPayload    :: Text   -- TODO should become ToObject
+    { liSelection :: LogSelection
+    , liSeverity  :: Severity
+    , liPayload   :: Text   -- TODO should become ToObject
     } deriving (Show)
 
 traceNamedItem
@@ -102,7 +109,8 @@ traceNamedItem
     -> Text
     -> m ()
 traceNamedItem logTrace p s m =
-    traceWith (named logTrace) LogItem { liSelection = p
+    traceWith (named logTrace) $ LogMessage $
+                               LogItem { liSelection = p
                                        , liSeverity  = s
                                        , liPayload   = m
                                        }
@@ -124,14 +132,14 @@ modifyName
     -> TraceNamed m
 modifyName k = contramap f
   where
-    f (LogNamed name aggr item) = LogNamed (k name) aggr item
+    f (LogNamed name item) = LogNamed (k name) item
 
 appendName :: Text -> TraceNamed m -> TraceNamed m
 appendName lname = modifyName (\e -> [lname] <> e)
 
 -- | return a Trace from a TraceNamed
 named :: Trace m (LogNamed i) -> Trace m i
-named = contramap (LogNamed mempty mempty)
+named = contramap (LogNamed mempty)
 
 -- | serialize output  -- TODO remove it
 locallock :: MVar ()
@@ -139,31 +147,16 @@ locallock = unsafePerformIO $ newMVar ()
 
 -- | 'Trace' to stdout.
 stdoutTrace :: TraceNamed IO
-stdoutTrace = Trace $ Op $ \lognamed -> do
-    withMVar locallock $ \_ ->
-        TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload $ lnItem lognamed)
+stdoutTrace = Trace $ Op $ \lognamed ->
+    case lnItem lognamed of
+        (LogMessage logItem) -> do
+            withMVar locallock $ \_ ->
+                TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload logItem)
+        _ -> pure ()
   where
     contextname :: [LoggerName] -> Text
-    contextname = foldr (\e a -> a <> "." <> e) ""
-
--- | Trace which aggregates online
-aggregateTrace :: TraceNamed IO
-aggregateTrace = Trace $ Op $ \lognamed -> do
-    withMVar locallock $ \_ -> do
-        TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload $ lnItem lognamed)
-        TIO.putStrLn $ "   " <> pack(show $ lnAggregation lognamed)
-  where
-    contextname :: [LoggerName] -> Text
-    contextname = foldr (\e a -> a <> "." <> e) ""
-    
-
--- | logging functions
-logObservable :: TraceNamed m -> LoggerName -> Integer -> TraceNamed m
-logObservable logTrace context value = 
-    contramap f logTrace
-  where
-    f (LogNamed name aggr item) = LogNamed name (update name aggr) item
-    update name aggr = alter (updateAggregation value) (name <> [context]) aggr 
+    contextname (y : ys) = foldl (\e a -> e <> "." <> a) y ys
+    contextname []       = "(null name)"
 
 logMessage, logMessageS, logMessageP :: TraceNamed m -> Severity -> Text -> m ()
 logMessage logTrace  = traceNamedItem logTrace Both
@@ -200,3 +193,70 @@ logNoticeUnsafeP logTrace  = traceNamedItem logTrace PublicUnsafe Notice
 logWarningUnsafeP logTrace = traceNamedItem logTrace PublicUnsafe Warning
 logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
+---------------------
+
+data LogObject = LogMessage LogItem | LogValue Integer deriving Show
+
+stmNoTrace :: STM.STM t -> STM.STM (t, [LogObject])
+stmNoTrace action = do
+    t <- action
+    return (t, [LogMessage (LogItem Both Info "enter"), LogMessage (LogItem Both Info "leave")])
+
+type Counter = POSIXTime -- Integer
+data CounterState = CounterState Unique [Counter]
+
+example :: IO ()
+example = do
+    let logTrace = appendName "my_example" stdoutTrace
+    result <- bracketObserveIO_ logTrace "expect_answer" setVar_
+    logInfo logTrace $ pack $ show result
+
+setVar_ :: STM.STM Integer
+setVar_ = do
+    t <- STM.newTVar 0
+    STM.writeTVar t 42
+    res <- STM.readTVar t
+    return res
+
+bracketObserveIO_ :: TraceNamed IO -> Text -> STM.STM t -> IO t
+bracketObserveIO_ logTrace0 name action = do
+    (logTrace, countersid) <- observeOpen logTrace0 name
+    (t, as) <- STM.atomically $ stmNoTrace action   -- run action, return result and log items
+    -- propagate outcome to TraceNamed and print
+    observeClose logTrace countersid as
+    -- final stuff
+    --
+    -- combine local
+    pure t
+
+observeOpen :: TraceNamed IO -> Text -> IO (TraceNamed IO, CounterState)
+observeOpen logTrace0 name = do
+    let logTrace = appendName name logTrace0
+    counters <- readCounters
+    identifier <- newUnique
+    logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
+    -- here: send opening message to Trace
+    return (logTrace, CounterState identifier counters)
+
+readCounters :: IO [Counter]
+readCounters = do
+    time <- getPOSIXTime
+    return [time]
+
+observeClose :: TraceNamed IO -> CounterState -> [LogObject] -> IO ()
+observeClose logTrace (CounterState identifier counters0) as = do
+    counters <- readCounters
+    -- here: send closing message to Trace (with diff of counters)
+    logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
+    logInfo logTrace $ "diff counters: " <> (pack $ (show $ zipWith (\a b -> nominalDiffTimeToMicroseconds (b - a)) counters0 counters))
+    -- here: send `as` to Trace (list of messages, list of values)
+    -- let (msg, vals) = partition (\case {(LogMessage _) -> True; _ -> False}) as
+    -- forM_ msgs (\LogMessage t -> traceNamedItem logTrace t)
+    -- traceNamedItem logTrace $ aggregate vals
+    forM_ as $ (\case
+        (LogMessage t) -> traceNamedItem logTrace (liSelection t) (liSeverity t) (liPayload t)
+        a              -> logInfo logTrace (pack $ show a)
+        )
+
+nominalDiffTimeToMicroseconds :: POSIXTime -> Microsecond
+nominalDiffTimeToMicroseconds = fromMicroseconds . round . (* 1000000)
