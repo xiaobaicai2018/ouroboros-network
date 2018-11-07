@@ -23,6 +23,7 @@ library
   default-extensions:  OverloadedStrings
   other-extensions:    OverloadedStrings
   build-depends:       base,
+                       aeson,
                        array,
                        bytestring,
                        clock,

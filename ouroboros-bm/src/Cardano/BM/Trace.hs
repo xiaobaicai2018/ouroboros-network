@@ -1,3 +1,5 @@
+{-# LANGUAGE DeriveAnyClass    #-}
+{-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -29,13 +31,17 @@ import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad (forM_)
 import qualified Control.Monad.STM as STM
 
+import           Data.Aeson (ToJSON, toEncoding, toJSON)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
+import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
 import           Data.Text (Text, pack)
 import qualified Data.Text.IO as TIO
 import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
 import           Data.Time.Units (Microsecond, fromMicroseconds)
 import           Data.Unique (Unique, hashUnique, newUnique)
+
+import           GHC.Generics (Generic)
 
 import           System.IO.Unsafe (unsafePerformIO)
 
@@ -88,11 +94,11 @@ data LogSelection =
     | PublicUnsafe -- only to public logs, not console.
     | Private      -- only to private logs.
     | Both         -- to public and private logs.
-    deriving (Show)
+    deriving (Show, Generic, ToJSON)
 
 -- | severity of log message
 data Severity = Debug | Info | Warning | Notice | Error
-                deriving (Show, Eq, Ord)
+                deriving (Show, Eq, Ord, Generic, ToJSON)
 
 
 -- | log item
@@ -100,7 +106,7 @@ data LogItem = LogItem
     { liSelection :: LogSelection
     , liSeverity  :: Severity
     , liPayload   :: Text   -- TODO should become ToObject
-    } deriving (Show)
+    } deriving (Show, Generic, ToJSON)
 
 traceNamedObject
     :: TraceNamed m
@@ -116,11 +122,10 @@ traceNamedItem
     -> Text
     -> m ()
 traceNamedItem logTrace p s m =
-    traceWith (named logTrace) $ LogMessage $
-                               LogItem { liSelection = p
-                                       , liSeverity  = s
-                                       , liPayload   = m
-                                       }
+    traceWith (named logTrace) $ LP $ LogMessage $ LogItem { liSelection = p
+                                                           , liSeverity  = s
+                                                           , liPayload   = m
+                                                           }
 
 
 natTrace :: (forall x . m x -> n x) -> Trace m s -> Trace n s
@@ -156,13 +161,23 @@ locallock = unsafePerformIO $ newMVar ()
 stdoutTrace :: TraceNamed IO
 stdoutTrace = Trace $ Op $ \lognamed ->
     case lnItem lognamed of
-        (LogMessage logItem) -> do
+        LP (LogMessage logItem) -> do
             withMVar locallock $ \_ ->
                 TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload logItem)
-        (LogState (CounterState identifier cs)) -> do
+        -- obj -> do
+        --     withMVar locallock $ \_ ->
+        --         TIO.putStrLn $ contextname (lnName lognamed)
+        --             <> " :: " <> (pack . show . toJSON) obj
+        -- TODO better ToJSON instance for LogObject
+        (ObserveOpen (CounterState identifier cs)) -> do
             withMVar locallock $ \_ ->
                 TIO.putStrLn $ contextname (lnName lognamed)
-                    <> " :: " <> pack (show (hashUnique identifier))
+                    <> " :: ObserveOpen " <> pack (show (hashUnique identifier))
+                    <> " :: " <> (pack (show cs))
+        (ObserveClose (CounterState identifier cs) _) -> do
+            withMVar locallock $ \_ ->
+                TIO.putStrLn $ contextname (lnName lognamed)
+                    <> " :: ObserveClose " <> pack (show (hashUnique identifier))
                     <> " :: " <> (pack (show cs))
   where
     contextname :: [LoggerName] -> Text
@@ -206,23 +221,37 @@ logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
 ---------------------
 
-data LogObject =
-    LogMessage LogItem
-  | LogState CounterState
+data LogPrims = LogMessage LogItem | LogValue Text Integer deriving (Generic, ToJSON)
+data LogObject = LP LogPrims
+  		       | ObserveOpen CounterState
+  		       | ObserveClose CounterState [LogPrims]
+                    deriving (Generic, ToJSON)
 
-stmNoTrace :: STM.STM t -> STM.STM (t, [LogObject])
-stmNoTrace action = do
+stmWithLog :: STM.STM t -> STM.STM (t, [LogObject])
+stmWithLog action = do
     t <- action
-    return (t, [LogMessage (LogItem Both Info "enter"), LogMessage (LogItem Both Info "leave")])
+    return (t, [LP (LogMessage (LogItem Both Info "enter")),LP (LogMessage (LogItem Both Info "leave"))])
+
+-- stmWithLog :: STM.STM t -> STM.STM (t, [LogPrims])
+-- stmWithLog action = do
+--      t <- action
+--      return (t, [LogMessage “enter”, LogMessage “leave”])
+
 
 type Counter = POSIXTime
 
-data CounterState = CounterState Unique [Counter]
+data CounterState = CounterState Unique [Counter] deriving (Generic, ToJSON)
+
+instance Generic Unique where
+
+instance ToJSON Unique where
+    toJSON = toJSON . hashUnique
+    toEncoding = toEncoding . hashUnique
 
 example :: {-TraceNamed m ->-} IO ()
 example = do
     let logTrace = appendName "my_example" stdoutTrace
-    result <- bracketObserveIO_ logTrace "expect_answer" setVar_
+    result <- bracketObserveIO logTrace "expect_answer" setVar_
     logInfo logTrace $ pack $ show result
 
 setVar_ :: STM.STM Integer
@@ -232,41 +261,45 @@ setVar_ = do
     res <- STM.readTVar t
     return res
 
-bracketObserveIO_ :: TraceNamed IO -> Text -> STM.STM t -> IO t
-bracketObserveIO_ logTrace0 name action = do
-    (logTrace, countersid) <- observeOpen logTrace0 name
-    (t, as) <- STM.atomically $ stmNoTrace action   -- run action, return result and log items
-    -- propagate outcome to TraceNamed and print
-    observeClose logTrace countersid as
-    -- final stuff
-    --
-    -- combine local
-    pure t
+bracketObserveIO :: TraceNamed IO -> Text -> STM.STM t -> IO t
+bracketObserveIO logTrace0 name action = do
+  logTrace <- transformTrace name logTrace0
+  countersid <- observeOpen logTrace
+  -- run action, return result and log items
+  (t, as) <- STM.atomically $ stmWithLog action
+  observeClose logTrace countersid as
+  pure t
 
-observeOpen :: TraceNamed IO -> Text -> IO (TraceNamed IO, CounterState)
-observeOpen logTrace0 name = do
-    let logTrace = appendName name logTrace0
+observeOpen :: TraceNamed IO -> IO CounterState
+observeOpen logTrace = do
     identifier <- newUnique
-    counters <- readCounters
+    -- take measurement
+    counters   <- readCounters
     logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
-    -- pass measurement to trace
-    traceNamedObject logTrace $ LogState $ CounterState identifier counters
-    -- here: send opening message to Trace
-    return (logTrace, CounterState identifier counters)
+    -- send opening message with measurement to Trace
+    let state = CounterState identifier counters
+    traceNamedObject logTrace $ ObserveOpen state
+    return state
 
 observeClose :: TraceNamed IO -> CounterState -> [LogObject] -> IO ()
-observeClose logTrace (CounterState identifier counters0) as = do
+observeClose logTrace (CounterState identifier counters0) logObjects = do
+    -- take measurement
     counters <- readCounters
+    logInfo logTrace $ "diff counters: "
+        <> pack (show $ zipWith (\a b -> nominalDiffTimeToMicroseconds (b - a)) counters0 counters)
     -- here: send closing message to Trace (with diff of counters)
     logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
+    let msgs = filterPrims logObjects
     -- pass measurement to trace
-    traceNamedObject logTrace $ LogState $ CounterState identifier counters
-    logInfo logTrace $ "diff counters: " <> (pack $ (show $ zipWith (\a b -> nominalDiffTimeToMicroseconds (b - a)) counters0 counters))
-    -- here: send `as` to Trace (list of messages, list of values)
-    -- let (msg, vals) = partition (\case {(LogMessage _) -> True; _ -> False}) as
-    -- forM_ msgs (\LogMessage t -> traceNamedItem logTrace t)
-    -- traceNamedItem logTrace $ aggregate vals
-    forM_ as $ traceNamedObject logTrace
+    traceNamedObject logTrace $ ObserveClose (CounterState identifier counters) msgs
+    -- trace the messages gathered from inside the action
+    -- TODO what about ObserveOpen or ObserveClose inside STM action??
+    forM_ msgs $ traceNamedObject logTrace . LP
+  where
+    filterPrims :: [LogObject] -> [LogPrims]
+    filterPrims = mapMaybe (\case
+                                (LP a) -> Just a
+                                _      -> Nothing)
 
 readCounters :: IO [Counter]
 readCounters = do
@@ -275,3 +308,37 @@ readCounters = do
 
 nominalDiffTimeToMicroseconds :: POSIXTime -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . round . (* 1000000)
+
+data TraceTransformer = Neutral
+                      | NoTrace
+                      | DropOpening
+                      | DropClosing
+                      | Aggregate
+                      | ListTrace (STM.TVar [LogObject])
+
+traceInTVar :: STM.TVar [LogObject] -> Trace STM.STM LogObject
+traceInTVar tvar = Trace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
+
+traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
+traceInTVarIO tvar = Trace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
+
+oracle :: TraceNamed m -> Text -> IO TraceTransformer
+oracle _ _ = return Neutral -- DropOpening
+-- TODO
+-- oracle (lh, _) name = do
+-- 	confighandler <- getConfigHandler lh
+-- 	return $ getTransformer confighandler name
+
+-- TraceNamed m = (LogHandler, Trace m (LogObject))
+
+transformTrace :: Text -> TraceNamed IO -> IO (TraceNamed IO)
+transformTrace name {-(lh, -}logTrace0{-)-} = do
+    traceTransformer <- oracle logTrace0 name
+    return $ case traceTransformer of
+        Neutral -> appendName name logTrace0
+        NoTrace -> {-(lh, -}Trace $ Op $ \_ -> pure (){-)-}
+        DropOpening -> {-(lh, -}Trace $ Op $ \lognamed ->
+            case lnItem lognamed of
+                ObserveOpen _ -> return ()
+                obj           -> traceNamedObject logTrace0 obj {-)-}
+        ListTrace tvar -> {-(lh, -}traceInTVarIO tvar{-)-}
