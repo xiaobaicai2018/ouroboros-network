@@ -49,8 +49,8 @@ import           Ouroboros.Network.MonadClass.MonadSTM hiding (TVar)
 import qualified Ouroboros.Network.MonadClass.MonadSTM as MonadSTM
 import           Ouroboros.Network.MonadClass.MonadTimer
 
-import           Cardano.BM.Trace
 import           Cardano.BM.STM
+import           Cardano.BM.Trace
 
 {-# ANN module ("HLint: ignore Use readTVarIO"::String) #-}
 

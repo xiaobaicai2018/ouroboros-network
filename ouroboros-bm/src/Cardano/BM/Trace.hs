@@ -105,9 +105,6 @@ traceNamedItem logTrace p s m =
 -- contramap :: (a -> b) -> f b -> f a
 -- contramap :: (LogItem -> LogNamed LogItem) -> Trace m (LogNamed LogItem) -> Trace m LogItem
 
-natTrace :: (forall x . m x -> n x) -> Trace m s -> Trace n s
-natTrace nat (Trace (Op tr)) = Trace $ Op $ nat . tr
-
 instance Contravariant (Trace m) where
     contramap f = Trace . contramap f . runTrace
 
