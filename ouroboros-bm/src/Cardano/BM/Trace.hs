@@ -102,6 +102,13 @@ data LogItem = LogItem
     , liPayload   :: Text   -- TODO should become ToObject
     } deriving (Show)
 
+traceNamedObject
+    :: TraceNamed m
+    -> LogObject
+    -> m ()
+traceNamedObject logTrace o =
+    traceWith (named logTrace) o
+
 traceNamedItem
     :: TraceNamed m
     -> LogSelection
@@ -152,7 +159,11 @@ stdoutTrace = Trace $ Op $ \lognamed ->
         (LogMessage logItem) -> do
             withMVar locallock $ \_ ->
                 TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload logItem)
-        _ -> pure ()
+        (LogState (CounterState identifier cs)) -> do
+            withMVar locallock $ \_ ->
+                TIO.putStrLn $ contextname (lnName lognamed)
+                    <> " :: " <> pack (show (hashUnique identifier))
+                    <> " :: " <> (pack (show cs))
   where
     contextname :: [LoggerName] -> Text
     contextname (y : ys) = foldl (\e a -> e <> "." <> a) y ys
@@ -195,17 +206,20 @@ logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
 ---------------------
 
-data LogObject = LogMessage LogItem | LogValue Integer deriving Show
+data LogObject =
+    LogMessage LogItem
+  | LogState CounterState
 
 stmNoTrace :: STM.STM t -> STM.STM (t, [LogObject])
 stmNoTrace action = do
     t <- action
     return (t, [LogMessage (LogItem Both Info "enter"), LogMessage (LogItem Both Info "leave")])
 
-type Counter = POSIXTime -- Integer
+type Counter = POSIXTime
+
 data CounterState = CounterState Unique [Counter]
 
-example :: IO ()
+example :: {-TraceNamed m ->-} IO ()
 example = do
     let logTrace = appendName "my_example" stdoutTrace
     result <- bracketObserveIO_ logTrace "expect_answer" setVar_
@@ -232,31 +246,32 @@ bracketObserveIO_ logTrace0 name action = do
 observeOpen :: TraceNamed IO -> Text -> IO (TraceNamed IO, CounterState)
 observeOpen logTrace0 name = do
     let logTrace = appendName name logTrace0
-    counters <- readCounters
     identifier <- newUnique
+    counters <- readCounters
     logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
+    -- pass measurement to trace
+    traceNamedObject logTrace $ LogState $ CounterState identifier counters
     -- here: send opening message to Trace
     return (logTrace, CounterState identifier counters)
-
-readCounters :: IO [Counter]
-readCounters = do
-    time <- getPOSIXTime
-    return [time]
 
 observeClose :: TraceNamed IO -> CounterState -> [LogObject] -> IO ()
 observeClose logTrace (CounterState identifier counters0) as = do
     counters <- readCounters
     -- here: send closing message to Trace (with diff of counters)
     logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
+    -- pass measurement to trace
+    traceNamedObject logTrace $ LogState $ CounterState identifier counters
     logInfo logTrace $ "diff counters: " <> (pack $ (show $ zipWith (\a b -> nominalDiffTimeToMicroseconds (b - a)) counters0 counters))
     -- here: send `as` to Trace (list of messages, list of values)
     -- let (msg, vals) = partition (\case {(LogMessage _) -> True; _ -> False}) as
     -- forM_ msgs (\LogMessage t -> traceNamedItem logTrace t)
     -- traceNamedItem logTrace $ aggregate vals
-    forM_ as $ (\case
-        (LogMessage t) -> traceNamedItem logTrace (liSelection t) (liSeverity t) (liPayload t)
-        a              -> logInfo logTrace (pack $ show a)
-        )
+    forM_ as $ traceNamedObject logTrace
+
+readCounters :: IO [Counter]
+readCounters = do
+    time <- getPOSIXTime
+    return [time]
 
 nominalDiffTimeToMicroseconds :: POSIXTime -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . round . (* 1000000)
