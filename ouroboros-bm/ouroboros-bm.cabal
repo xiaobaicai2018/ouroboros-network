@@ -13,11 +13,10 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  -- At this experiment/prototype stage everything is exposed.
-  -- This has to be tidied up once the design becomes clear.
   exposed-modules:
                        Cardano.BM.STM
                        Cardano.BM.Trace
+                       Cardano.BM.Aggregation
   other-modules:
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
@@ -40,17 +39,32 @@ library
                        -fno-ignore-asserts
 
 test-suite tests
-  buildable:           False
-
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
   main-is:             Main.hs
-  other-modules:
+  other-modules:       Cardano.BM.Test.Trace
+                       Cardano.BM.Test.Aggregation
+                       Cardano.BM.Test.STM
+                       Cardano.BM.Arbitrary.Aggregation
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
   build-depends:       base,
-                       ouroboros-network,
                        ouroboros-bm,
-                       QuickCheck
 
+                       array,
+                       bytestring,
+                       clock,
+                       containers,
+                       mtl,
+                       process,
+                       QuickCheck,
+                       random,
+                       semigroups,
+                       stm,
+                       tasty,
+                       tasty-hunit,
+                       tasty-quickcheck,
+                       text,
+                       transformers,
+                       void
   ghc-options:         -Wall

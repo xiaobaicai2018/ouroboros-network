@@ -43,6 +43,8 @@ import           Data.Unique (Unique, hashUnique, newUnique)
 
 import           GHC.Generics (Generic)
 
+import           Cardano.BM.Aggregation
+
 import           System.IO.Unsafe (unsafePerformIO)
 
 
@@ -54,33 +56,6 @@ newtype Trace m s = Trace
 type TraceNamed m = Trace m (LogNamed LogObject)
 
 type LoggerName = Text
-
-data Aggregation = Aggregation {
-    fmin   :: Integer,
-    fmax   :: Integer,
-    fmean  :: Integer,
-    fcount :: Integer,
-    fsumA  :: Integer,  -- TODO
-    fsumB  :: Integer   -- TODO
-    } deriving (Show)
-
-updateAggregation :: Integer -> Maybe Aggregation -> Maybe Aggregation
-updateAggregation v Nothing =
-    Just $
-    Aggregation { fmin=v
-                , fmax=v
-                , fmean=v
-                , fcount=1
-                , fsumA=v
-                , fsumB=v * v }
-updateAggregation v (Just (Aggregation _min _max _mean _count _sumA _sumB)) =
-    Just $
-    Aggregation { fmin=(min _min v)
-                , fmax=(max _max v)
-                , fmean=((_sumA + v) `div` (_count + 1))
-                , fcount=(_count + 1)
-                , fsumA=(_sumA + v)
-                , fsumB=(_sumB + v * v) }
 
 -- | Attach a 'LoggerName' to something.
 data LogNamed item = LogNamed
@@ -127,6 +102,8 @@ traceNamedItem logTrace p s m =
                                                            , liPayload   = m
                                                            }
 
+-- contramap :: (a -> b) -> f b -> f a
+-- contramap :: (LogItem -> LogNamed LogItem) -> Trace m (LogNamed LogItem) -> Trace m LogItem
 
 natTrace :: (forall x . m x -> n x) -> Trace m s -> Trace n s
 natTrace nat (Trace (Op tr)) = Trace $ Op $ nat . tr
@@ -136,6 +113,12 @@ instance Contravariant (Trace m) where
 
 traceWith :: Trace m s -> s -> m ()
 traceWith = getOp . runTrace
+
+-- getOp :: Op ((m ()) s) -> s -> m ()
+-- runTrace :: Op ((m ()) s)
+
+natTrace :: (forall x . m x -> n x) -> Trace m s -> Trace n s
+natTrace nat (Trace (Op tr)) = Trace $ Op $ nat . tr
 
 -- | add/modify named context
 modifyName

@@ -1,10 +1,13 @@
-module Main (main) where
+module Main
+  (
+    main
+  ) where
 
 import           Test.Tasty
 
---import qualified Test.STM (tests)
---import qualified Test.Aggregation (tests)
---import qualified Test.Trace (tests)
+import qualified Cardano.BM.Test.Aggregation (tests)
+import qualified Cardano.BM.Test.STM (tests)
+import qualified Cardano.BM.Test.Trace (tests)
 
 main :: IO ()
 main = defaultMain tests
@@ -12,5 +15,7 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup "ouroboros-bm"
-  [ --Test.Trace.tests
+  [ Cardano.BM.Test.Aggregation.tests
+  , Cardano.BM.Test.STM.tests
+  , Cardano.BM.Test.Trace.tests
   ]
