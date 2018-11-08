@@ -8,6 +8,7 @@ module Cardano.BM.Trace
     (
       TraceNamed
     , stdoutTrace
+    , noTrace
     -- , aggregateTrace
     -- * context naming
     , appendName
@@ -25,14 +26,18 @@ module Cardano.BM.Trace
     ) where
 
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, takeMVar,
+                     withMVar)
 
 import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad (forM_)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
 import           Data.Aeson (ToJSON, toEncoding, toJSON)
+import           Data.Bool (bool)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
+import           Data.Map (Map, findWithDefault, insert)
 import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
 import           Data.Text (Text, pack)
@@ -84,19 +89,19 @@ data LogItem = LogItem
     } deriving (Show, Generic, ToJSON)
 
 traceNamedObject
-    :: TraceNamed m
+    :: TraceNamedE m
     -> LogObject
     -> m ()
-traceNamedObject logTrace o =
-    traceWith (named logTrace) o
+traceNamedObject (_, logTrace) obj =
+    traceWith (named logTrace) obj
 
 traceNamedItem
-    :: TraceNamed m
+    :: TraceNamedE m
     -> LogSelection
     -> Severity
     -> Text
     -> m ()
-traceNamedItem logTrace p s m =
+traceNamedItem (_, logTrace) p s m =
     traceWith (named logTrace) $ LP $ LogMessage $ LogItem { liSelection = p
                                                            , liSeverity  = s
                                                            , liPayload   = m
@@ -137,6 +142,10 @@ named = contramap (LogNamed mempty)
 locallock :: MVar ()
 locallock = unsafePerformIO $ newMVar ()
 
+-- doesn't force the logged messages.
+noTrace :: Applicative m => Trace m a
+noTrace = Trace $ Op $ const (pure ())
+
 -- | 'Trace' to stdout.
 stdoutTrace :: TraceNamed IO
 stdoutTrace = Trace $ Op $ \lognamed ->
@@ -164,27 +173,27 @@ stdoutTrace = Trace $ Op $ \lognamed ->
     contextname (y : ys) = foldl (\e a -> e <> "." <> a) y ys
     contextname []       = "(null name)"
 
-logMessage, logMessageS, logMessageP :: TraceNamed m -> Severity -> Text -> m ()
+logMessage, logMessageS, logMessageP :: TraceNamedE m -> Severity -> Text -> m ()
 logMessage logTrace  = traceNamedItem logTrace Both
 logMessageS logTrace = traceNamedItem logTrace Private
 logMessageP logTrace = traceNamedItem logTrace Public
 
 logDebug, logInfo, logNotice, logWarning, logError
-    :: TraceNamed m -> Text -> m ()
+    :: TraceNamedE m -> Text -> m ()
 logDebug logTrace   = traceNamedItem logTrace Both Debug
 logInfo logTrace    = traceNamedItem logTrace Both Info
 logNotice logTrace  = traceNamedItem logTrace Both Notice
 logWarning logTrace = traceNamedItem logTrace Both Warning
 logError logTrace   = traceNamedItem logTrace Both Error
 logDebugS, logInfoS, logNoticeS, logWarningS, logErrorS
-    :: TraceNamed m -> Text -> m ()
+    :: TraceNamedE m -> Text -> m ()
 logDebugS logTrace   = traceNamedItem logTrace Private Debug
 logInfoS logTrace    = traceNamedItem logTrace Private Info
 logNoticeS logTrace  = traceNamedItem logTrace Private Notice
 logWarningS logTrace = traceNamedItem logTrace Private Warning
 logErrorS logTrace   = traceNamedItem logTrace Private Error
 logDebugP, logInfoP, logNoticeP, logWarningP, logErrorP
-    :: TraceNamed m -> Text -> m ()
+    :: TraceNamedE m -> Text -> m ()
 logDebugP logTrace   = traceNamedItem logTrace Public Debug
 logInfoP logTrace    = traceNamedItem logTrace Public Info
 logNoticeP logTrace  = traceNamedItem logTrace Public Notice
@@ -192,7 +201,7 @@ logWarningP logTrace = traceNamedItem logTrace Public Warning
 logErrorP logTrace   = traceNamedItem logTrace Public Error
 
 logDebugUnsafeP, logInfoUnsafeP, logNoticeUnsafeP, logWarningUnsafeP, logErrorUnsafeP
-    :: TraceNamed m -> Text -> m ()
+    :: TraceNamedE m -> Text -> m ()
 logDebugUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Debug
 logInfoUnsafeP logTrace    = traceNamedItem logTrace PublicUnsafe Info
 logNoticeUnsafeP logTrace  = traceNamedItem logTrace PublicUnsafe Notice
@@ -201,11 +210,11 @@ logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
 ---------------------
 
-data LogPrims = LogMessage LogItem | LogValue Text Integer deriving (Generic, ToJSON)
+data LogPrims = LogMessage LogItem | LogValue Text Integer deriving (Generic, Show, ToJSON)
 data LogObject = LP LogPrims
   		       | ObserveOpen CounterState
   		       | ObserveClose CounterState [LogPrims]
-                    deriving (Generic, ToJSON)
+                    deriving (Generic, Show, ToJSON)
 
 stmWithLog :: STM.STM t -> STM.STM (t, [LogObject])
 stmWithLog action = do
@@ -217,10 +226,16 @@ stmWithLog action = do
 --      t <- action
 --      return (t, [LogMessage “enter”, LogMessage “leave”])
 
-
 type Counter = POSIXTime
 
-data CounterState = CounterState Unique [Counter] deriving (Generic, ToJSON)
+data CounterState =
+    CounterState Unique [Counter]
+  | EmptyCounterState Unique
+        deriving (Generic, Show, ToJSON)
+
+stateIdentifier :: CounterState -> Unique
+stateIdentifier (CounterState      x _) = x
+stateIdentifier (EmptyCounterState x)   = x
 
 instance Generic Unique where
 
@@ -228,11 +243,28 @@ instance ToJSON Unique where
     toJSON = toJSON . hashUnique
     toEncoding = toEncoding . hashUnique
 
+instance Show Unique where
+    show = show . hashUnique
+
 example :: {-TraceNamed m ->-} IO ()
 example = do
-    let logTrace = appendName "my_example" stdoutTrace
+    let logTrace0 = appendName "my_example" stdoutTrace
+    ctx <- newMVar $ TraceController $ mempty
+    let logTrace = (ctx, logTrace0)
+    insertInOracle logTrace "expect_answer" Neutral -- DropOpening
     result <- bracketObserveIO logTrace "expect_answer" setVar_
     logInfo logTrace $ pack $ show result
+
+example_TVar :: IO ()
+example_TVar = do
+    tvar <- STM.newTVarIO []
+    let logTrace0 = appendName "my_example" $ traceInTVarIO tvar
+    ctx <- newMVar $ TraceController $ mempty
+    let logTrace = (ctx, logTrace0)
+    result <- bracketObserveIO logTrace "expect_answer" setVar_
+    logInfo logTrace $ pack $ show result
+    items <- STM.readTVarIO tvar
+    TIO.putStrLn $ pack $ show $ dropPrims $ items
 
 setVar_ :: STM.STM Integer
 setVar_ = do
@@ -241,37 +273,68 @@ setVar_ = do
     res <- STM.readTVar t
     return res
 
-bracketObserveIO :: TraceNamed IO -> Text -> STM.STM t -> IO t
-bracketObserveIO logTrace0 name action = do
-  logTrace <- transformTrace name logTrace0
-  countersid <- observeOpen logTrace
-  -- run action, return result and log items
-  (t, as) <- STM.atomically $ stmWithLog action
-  observeClose logTrace countersid as
-  pure t
+setupTrace :: MonadIO m => TraceConfiguration -> m (TraceNamedE m)
+setupTrace (TraceConfiguration outputKind name) = do
+    ctx <- liftIO $ newMVar $ TraceController $ mempty
+    let logTrace0 = bool noTrace (natTrace liftIO stdoutTrace) (outputKind == StdOut)
+    let logTrace = (ctx, logTrace0)
+    liftIO $ insertInOracle logTrace name Neutral
+    return logTrace
 
-observeOpen :: TraceNamed IO -> IO CounterState
-observeOpen logTrace = do
+withTrace :: MonadIO m =>  TraceConfiguration -> (TraceNamedE m -> m ()) -> m ()
+withTrace cfg action = do
+    logTrace <- setupTrace cfg
+    action logTrace
+
+bracketObserveIO :: TraceNamedE IO -> Text -> STM.STM t -> IO t
+bracketObserveIO logTrace0 name action = do
+    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    countersid <- observeOpen traceTransformer logTrace
+    -- run action, return result and log items
+    (t, as) <- STM.atomically $ stmWithLog action
+    observeClose traceTransformer logTrace countersid as
+    pure t
+
+observeOpen :: TraceTransformer -> TraceNamedE IO -> IO CounterState
+observeOpen traceTransformer logTrace = do
     identifier <- newUnique
-    -- take measurement
-    counters   <- readCounters
     logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
-    -- send opening message with measurement to Trace
-    let state = CounterState identifier counters
+
+    -- take measurement only if needed
+    state <- case traceTransformer of
+        NoTrace      -> return $ EmptyCounterState identifier
+        UntimedTrace -> return $ EmptyCounterState identifier
+        Neutral -> do
+            counters <- readCounters
+            return $ CounterState identifier counters
+    -- send opening message to Trace
     traceNamedObject logTrace $ ObserveOpen state
     return state
 
-observeClose :: TraceNamed IO -> CounterState -> [LogObject] -> IO ()
-observeClose logTrace (CounterState identifier counters0) logObjects = do
-    -- take measurement
-    counters <- readCounters
-    logInfo logTrace $ "diff counters: "
-        <> pack (show $ zipWith (\a b -> nominalDiffTimeToMicroseconds (b - a)) counters0 counters)
-    -- here: send closing message to Trace (with diff of counters)
+observeClose :: TraceTransformer -> TraceNamedE IO -> CounterState -> [LogObject] -> IO ()
+observeClose traceTransformer logTrace counterState logObjects = do
+    let identifier = stateIdentifier counterState
     logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
     let msgs = filterPrims logObjects
-    -- pass measurement to trace
-    traceNamedObject logTrace $ ObserveClose (CounterState identifier counters) msgs
+
+    -- take measurement only if needed
+    state <- case traceTransformer of
+        NoTrace      -> return $ EmptyCounterState identifier
+        UntimedTrace -> return $ EmptyCounterState identifier
+        Neutral -> do
+            counters <- readCounters
+            -- log the diff between the counters
+            case counterState of
+                CounterState _ counters0 ->
+                    logInfo logTrace $ "diff counters: "
+                        <> pack (show ( zipWith
+                                            (\a b -> nominalDiffTimeToMicroseconds (b - a))
+                                            counters0
+                                            counters))
+                _ -> pure ()
+            return $ CounterState identifier counters
+    -- send closing message to Trace
+    traceNamedObject logTrace $ ObserveClose state msgs
     -- trace the messages gathered from inside the action
     -- TODO what about ObserveOpen or ObserveClose inside STM action??
     forM_ msgs $ traceNamedObject logTrace . LP
@@ -280,6 +343,9 @@ observeClose logTrace (CounterState identifier counters0) logObjects = do
     filterPrims = mapMaybe (\case
                                 (LP a) -> Just a
                                 _      -> Nothing)
+
+dropPrims :: [LogObject] -> [LogObject]
+dropPrims = filter (\case {LP _ -> False; _ -> True})
 
 readCounters :: IO [Counter]
 readCounters = do
@@ -290,6 +356,7 @@ nominalDiffTimeToMicroseconds :: POSIXTime -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . round . (* 1000000)
 
 data TraceTransformer = Neutral
+                      | UntimedTrace
                       | NoTrace
                       | DropOpening
                       | DropClosing
@@ -299,26 +366,48 @@ data TraceTransformer = Neutral
 traceInTVar :: STM.TVar [LogObject] -> Trace STM.STM LogObject
 traceInTVar tvar = Trace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
 
-traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
+traceInTVarIO :: STM.TVar [LogObject] -> Trace IO (LogNamed LogObject)
 traceInTVarIO tvar = Trace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
 
-oracle :: TraceNamed m -> Text -> IO TraceTransformer
-oracle _ _ = return Neutral -- DropOpening
--- TODO
--- oracle (lh, _) name = do
--- 	confighandler <- getConfigHandler lh
--- 	return $ getTransformer confighandler name
+oracle :: TraceNamedE m -> Text -> IO TraceTransformer
+oracle (ctx, _) name =
+	getTraceTransformer ctx name
 
--- TraceNamed m = (LogHandler, Trace m (LogObject))
+type TraceNamedE m = (TraceContext, Trace m (LogNamed LogObject))
 
-transformTrace :: Text -> TraceNamed IO -> IO (TraceNamed IO)
-transformTrace name {-(lh, -}logTrace0{-)-} = do
-    traceTransformer <- oracle logTrace0 name
+type TraceContext = MVar TraceController
+data TraceController = TraceController {
+    traceTransformers :: Map Text TraceTransformer
+    -- ...
+    }
+
+data TraceConfiguration = TraceConfiguration
+  { tcOutputKind :: OutputKind
+  , tcName       :: Text
+  }
+
+data OutputKind = StdOut | Null deriving Eq
+
+getTraceContext :: TraceContext -> IO (Map Text TraceTransformer)
+getTraceContext ctx = traceTransformers <$> takeMVar ctx
+
+getTraceTransformer :: TraceContext -> Text -> IO TraceTransformer
+getTraceTransformer ctx name = do
+    transformers <- getTraceContext ctx
+    return $ findWithDefault Neutral name transformers
+
+insertInOracle :: Monad m =>  TraceNamedE m -> Text -> TraceTransformer -> IO ()
+insertInOracle (ctx, _) name trans =
+    modifyMVar_ ctx (\(TraceController map) -> return $ TraceController $ insert name trans map)
+
+transformTrace :: Text -> TraceNamedE IO -> IO (TraceTransformer, TraceNamedE IO)
+transformTrace name tr@(ctx, logTrace0) = do
+    traceTransformer <- oracle tr name
     return $ case traceTransformer of
-        Neutral -> appendName name logTrace0
-        NoTrace -> {-(lh, -}Trace $ Op $ \_ -> pure (){-)-}
-        DropOpening -> {-(lh, -}Trace $ Op $ \lognamed ->
+        Neutral     -> (traceTransformer, (ctx, appendName name logTrace0 ))
+        NoTrace     -> (traceTransformer, (ctx, Trace $ Op $ \_ -> pure ()))
+        DropOpening -> (traceTransformer, (ctx, Trace $ Op $ \lognamed ->
             case lnItem lognamed of
                 ObserveOpen _ -> return ()
-                obj           -> traceNamedObject logTrace0 obj {-)-}
-        ListTrace tvar -> {-(lh, -}traceInTVarIO tvar{-)-}
+                obj           -> traceNamedObject tr obj))
+        ListTrace tvar -> (traceTransformer, (ctx, traceInTVarIO tvar))

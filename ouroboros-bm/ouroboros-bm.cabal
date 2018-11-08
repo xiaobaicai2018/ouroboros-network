@@ -26,6 +26,7 @@ library
                        array,
                        bytestring,
                        clock,
+                       containers,
                        contravariant,
                        mtl,
                        stm,
