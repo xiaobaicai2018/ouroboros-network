@@ -6,13 +6,13 @@
 
 module Cardano.BM.Trace
     (
-      TraceNamed
+      TraceNamedE
     , stdoutTrace
     , noTrace
+    , emptyContext
     -- , aggregateTrace
     -- * context naming
     , appendName
-    , modifyName
     -- * utils
     , natTrace
     -- * log functions
@@ -131,8 +131,8 @@ modifyName k = contramap f
   where
     f (LogNamed name item) = LogNamed (k name) item
 
-appendName :: Text -> TraceNamed m -> TraceNamed m
-appendName lname = modifyName (\e -> [lname] <> e)
+appendName :: Text -> TraceNamedE m -> TraceNamedE m
+appendName lname (c,ltr) = (c, modifyName (\e -> [lname] <> e) ltr)
 
 -- | return a Trace from a TraceNamed
 named :: Trace m (LogNamed i) -> Trace m i
@@ -248,9 +248,9 @@ instance Show Unique where
 
 example :: {-TraceNamed m ->-} IO ()
 example = do
-    let logTrace0 = appendName "my_example" stdoutTrace
+    let logTrace0 = stdoutTrace
     ctx <- newMVar $ TraceController $ mempty
-    let logTrace = (ctx, logTrace0)
+    let logTrace = appendName "my_example" (ctx, logTrace0)
     insertInOracle logTrace "expect_answer" Neutral -- DropOpening
     result <- bracketObserveIO logTrace "expect_answer" setVar_
     logInfo logTrace $ pack $ show result
@@ -258,9 +258,9 @@ example = do
 example_TVar :: IO ()
 example_TVar = do
     tvar <- STM.newTVarIO []
-    let logTrace0 = appendName "my_example" $ traceInTVarIO tvar
+    let logTrace0 = traceInTVarIO tvar
     ctx <- newMVar $ TraceController $ mempty
-    let logTrace = (ctx, logTrace0)
+    let logTrace = appendName "my_example" $ (ctx, logTrace0)
     result <- bracketObserveIO logTrace "expect_answer" setVar_
     logInfo logTrace $ pack $ show result
     items <- STM.readTVarIO tvar
@@ -275,7 +275,7 @@ setVar_ = do
 
 setupTrace :: MonadIO m => TraceConfiguration -> m (TraceNamedE m)
 setupTrace (TraceConfiguration outputKind name) = do
-    ctx <- liftIO $ newMVar $ TraceController $ mempty
+    ctx <- liftIO $ emptyContext -- newMVar $ TraceController $ mempty
     let logTrace0 = bool noTrace (natTrace liftIO stdoutTrace) (outputKind == StdOut)
     let logTrace = (ctx, logTrace0)
     liftIO $ insertInOracle logTrace name Neutral
@@ -366,7 +366,7 @@ data TraceTransformer = Neutral
 traceInTVar :: STM.TVar [LogObject] -> Trace STM.STM LogObject
 traceInTVar tvar = Trace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
 
-traceInTVarIO :: STM.TVar [LogObject] -> Trace IO (LogNamed LogObject)
+traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
 traceInTVarIO tvar = Trace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
 
 oracle :: TraceNamedE m -> Text -> IO TraceTransformer
@@ -388,6 +388,10 @@ data TraceConfiguration = TraceConfiguration
 
 data OutputKind = StdOut | Null deriving Eq
 
+emptyContext :: IO TraceContext
+emptyContext =
+    newMVar $ TraceController $ mempty
+
 getTraceContext :: TraceContext -> IO (Map Text TraceTransformer)
 getTraceContext ctx = traceTransformers <$> takeMVar ctx
 
@@ -404,7 +408,7 @@ transformTrace :: Text -> TraceNamedE IO -> IO (TraceTransformer, TraceNamedE IO
 transformTrace name tr@(ctx, logTrace0) = do
     traceTransformer <- oracle tr name
     return $ case traceTransformer of
-        Neutral     -> (traceTransformer, (ctx, appendName name logTrace0 ))
+        Neutral     -> (traceTransformer, appendName name tr)
         NoTrace     -> (traceTransformer, (ctx, Trace $ Op $ \_ -> pure ()))
         DropOpening -> (traceTransformer, (ctx, Trace $ Op $ \lognamed ->
             case lnItem lognamed of
