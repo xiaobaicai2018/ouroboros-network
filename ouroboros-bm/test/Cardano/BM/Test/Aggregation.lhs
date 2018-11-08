@@ -1,3 +1,7 @@
+
+\subsection{Trace}
+
+\begin{code}
 module Cardano.BM.Test.Aggregation (
     tests
   ) where
@@ -58,4 +62,4 @@ unit_Aggregation_initial_zero =
                                              (Stats 0 0 1 0 0)
                                              0
                                              (Stats 0 0 0 0 0) )
-
+\end{code}

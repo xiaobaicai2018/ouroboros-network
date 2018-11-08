@@ -1,3 +1,7 @@
+
+\subsection{Trace}
+
+\begin{code}
 module Cardano.BM.Test.Trace (
     tests
   ) where
@@ -16,4 +20,4 @@ tests = testGroup "testing Trace" [
 
 prop_Trace_minimal :: Bool
 prop_Trace_minimal = True
-
+\end{code}

@@ -42,7 +42,7 @@ library
 test-suite tests
   type:                exitcode-stdio-1.0
   hs-source-dirs:      test
-  main-is:             Main.hs
+  main-is:             Main.lhs
   other-modules:       Cardano.BM.Test.Trace
                        Cardano.BM.Test.Aggregation
                        Cardano.BM.Test.STM
