@@ -1,3 +1,7 @@
+
+\subsection{Trace}
+
+\begin{code}
 {-# LANGUAGE DeriveAnyClass    #-}
 {-# LANGUAGE DeriveGeneric     #-}
 {-# LANGUAGE LambdaCase        #-}
@@ -53,7 +57,6 @@ import           Cardano.BM.Aggregation
 import           System.IO.Unsafe (unsafePerformIO)
 
 
--- | base Trace
 newtype Trace m s = Trace
     { runTrace :: Op (m ()) s
     }
@@ -62,13 +65,13 @@ type TraceNamed m = Trace m (LogNamed LogObject)
 
 type LoggerName = Text
 
--- | Attach a 'LoggerName' to something.
+-- Attach a 'LoggerName' to something.
 data LogNamed item = LogNamed
     { lnName :: [LoggerName]
     , lnItem :: item
     } deriving (Show)
 
--- | output selection
+-- output selection
 data LogSelection =
       Public       -- only to public logs.
     | PublicUnsafe -- only to public logs, not console.
@@ -76,12 +79,12 @@ data LogSelection =
     | Both         -- to public and private logs.
     deriving (Show, Generic, ToJSON)
 
--- | severity of log message
+-- severity of log message
 data Severity = Debug | Info | Warning | Notice | Error
                 deriving (Show, Eq, Ord, Generic, ToJSON)
 
 
--- | log item
+-- log item
 data LogItem = LogItem
     { liSelection :: LogSelection
     , liSeverity  :: Severity
@@ -122,7 +125,7 @@ traceWith = getOp . runTrace
 natTrace :: (forall x . m x -> n x) -> Trace m s -> Trace n s
 natTrace nat (Trace (Op tr)) = Trace $ Op $ nat . tr
 
--- | add/modify named context
+-- add/modify named context
 modifyName
     :: ([LoggerName] -> [LoggerName])
     -> TraceNamed m
@@ -134,11 +137,11 @@ modifyName k = contramap f
 appendName :: Text -> TraceNamedE m -> TraceNamedE m
 appendName lname (c,ltr) = (c, modifyName (\e -> [lname] <> e) ltr)
 
--- | return a Trace from a TraceNamed
+-- return a Trace from a TraceNamed
 named :: Trace m (LogNamed i) -> Trace m i
 named = contramap (LogNamed mempty)
 
--- | serialize output  -- TODO remove it
+-- serialize output  -- TODO remove it
 locallock :: MVar ()
 locallock = unsafePerformIO $ newMVar ()
 
@@ -146,7 +149,7 @@ locallock = unsafePerformIO $ newMVar ()
 noTrace :: Applicative m => Trace m a
 noTrace = Trace $ Op $ const (pure ())
 
--- | 'Trace' to stdout.
+-- 'Trace' to stdout.
 stdoutTrace :: TraceNamed IO
 stdoutTrace = Trace $ Op $ \lognamed ->
     case lnItem lognamed of
@@ -212,9 +215,9 @@ logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
 data LogPrims = LogMessage LogItem | LogValue Text Integer deriving (Generic, Show, ToJSON)
 data LogObject = LP LogPrims
-  		       | ObserveOpen CounterState
-  		       | ObserveClose CounterState [LogPrims]
-                    deriving (Generic, Show, ToJSON)
+               | ObserveOpen CounterState
+               | ObserveClose CounterState [LogPrims]
+               deriving (Generic, Show, ToJSON)
 
 stmWithLog :: STM.STM t -> STM.STM (t, [LogObject])
 stmWithLog action = do
@@ -415,3 +418,4 @@ transformTrace name tr@(ctx, logTrace0) = do
                 ObserveOpen _ -> return ()
                 obj           -> traceNamedObject tr obj))
         ListTrace tvar -> (traceTransformer, (ctx, traceInTVarIO tvar))
+\end{code}

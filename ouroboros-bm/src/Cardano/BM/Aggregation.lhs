@@ -1,4 +1,7 @@
 
+\subsection{Aggregation}
+
+\begin{code}
 module Cardano.BM.Aggregation
   (
     Aggregation (..)
@@ -11,8 +14,8 @@ data Stats = Stats {
     fmin :: Integer,
     fmax :: Integer,
     fcount :: Integer,
-    fsumA :: Integer,
-    fsumB :: Integer
+    fsum_A :: Integer,
+    fsum_B :: Integer
     } deriving (Show, Eq)
 
 data Aggregation = Aggregation {
@@ -20,17 +23,23 @@ data Aggregation = Aggregation {
     flast :: Integer,
     fdelta :: Stats
     } deriving (Show, Eq)
+\end{code}
 
+\subsubsection{Update aggregation}
+
+We distinguish an unitialized from an already initialized aggregation:
+
+\begin{code}
 updateAggregation :: Integer -> Maybe Aggregation -> Maybe Aggregation
 updateAggregation v Nothing =
     Just $
     Aggregation { fstats = Stats {
                     fmin=v , fmax=v , fcount=1
-                  , fsumA=v , fsumB=v * v }
+                  , fsum_A=v , fsum_B=v * v }
                 , flast = v
                 , fdelta = Stats {
                     fmin=0 , fmax=0 , fcount=0
-                  , fsumA=0 , fsumB=0 }
+                  , fsum_A=0 , fsum_B=0 }
                 }
 updateAggregation v (Just (Aggregation (Stats _min _max _count _sumA _sumB)
                                        _last
@@ -42,11 +51,11 @@ updateAggregation v (Just (Aggregation (Stats _min _max _count _sumA _sumB)
     Aggregation { fstats = Stats {
                       fmin=(min _min v) , fmax=(max _max v)
                     , fcount=(_count + 1)
-                    , fsumA=(_sumA + v) , fsumB=(_sumB + v * v) }
+                    , fsum_A=(_sumA + v) , fsum_B=(_sumB + v * v) }
                 , flast = v
                 , fdelta = Stats {
                     fmin=(min _dmin delta), fmax=(max _dmax delta)
                   , fcount=(_dcount + 1)
-                  , fsumA=(_dsumA + delta) , fsumB=(_dsumB + delta * delta) }
+                  , fsum_A=(_dsumA + delta) , fsum_B=(_dsumB + delta * delta) }
                 }
-
+\end{code}

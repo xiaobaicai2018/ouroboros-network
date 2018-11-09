@@ -3,6 +3,7 @@
 
 \usepackage{kpfonts}
 \usepackage[margin=1in]{geometry}
+\usepackage[pdfpagelabels]{hyperref}
 \usepackage{todonotes}
 \usepackage{amsmath}
 \usepackage{mathtools}
@@ -11,11 +12,21 @@
 
 %include polycode.fmt
 
-\begin{document}
 \title{Testing benchmarking and logging}
-\author{Alexander Diemand}
+\author{Alexander Diemand
+  \and
+        Andreas Triantafyllos}
 \date{November 2018}
+
+\begin{document}
+
+\hypersetup{pageanchor=false}
+\begin{titlepage}
 \maketitle
+\end{titlepage}
+
+\hypersetup{pageanchor=true}
+\pagenumbering{arabic}
 
 \tableofcontents
 

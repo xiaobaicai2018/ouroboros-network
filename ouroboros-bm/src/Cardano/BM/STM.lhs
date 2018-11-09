@@ -1,3 +1,7 @@
+
+\subsection{STM}
+
+\begin{code}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.BM.STM
@@ -38,4 +42,4 @@ measure_atomically logTrace0 name stm = do
   where
     t_ = pack
 
-
+\end{code}
