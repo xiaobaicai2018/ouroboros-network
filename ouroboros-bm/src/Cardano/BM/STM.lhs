@@ -19,7 +19,7 @@ import           Data.Time.Units (Microsecond, fromMicroseconds)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Trace (TraceNamedE, appendName, logDebug, logInfo)
+import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
 
 
 nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
@@ -27,7 +27,7 @@ nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 
 {-# NOINLINE measure_atomically #-}
 -- atomically :: STM a -> IO a
-measure_atomically :: (MonadIO m) => TraceNamedE m -> Text -> STM.STM a -> m a
+measure_atomically :: (MonadIO m) => Trace m -> Text -> STM.STM a -> m a
 measure_atomically logTrace0 name stm = do
     let logTrace = appendName name logTrace0
     logDebug logTrace $ "entering " <> name

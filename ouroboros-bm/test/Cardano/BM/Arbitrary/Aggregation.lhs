@@ -26,4 +26,3 @@ instance Arbitrary Aggregation where
                              (last vs)
                              (Stats (minimum $ delta vs) (maximum $ delta vs) (toInteger $ length vs) (sum $ delta vs) (sum2 $ delta vs))
 \end{code}
-
