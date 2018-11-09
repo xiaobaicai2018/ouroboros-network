@@ -64,3 +64,4 @@ updateAggregation v (Just (Aggregation (Stats _min _max _count _sumA _sumB)
                       }
                     }
 \end{code}
+

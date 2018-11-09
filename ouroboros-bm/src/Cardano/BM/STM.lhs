@@ -20,13 +20,21 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
 import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
+\end{code}
 
 
+\begin{code}
 nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
+\end{code}
 
+%if False
+\begin{code}
 {-# NOINLINE measure_atomically #-}
--- atomically :: STM a -> IO a
+\end{code}
+%endif
+
+\begin{code}
 measure_atomically :: (MonadIO m) => Trace m -> Text -> STM.STM a -> m a
 measure_atomically logTrace0 name stm = do
     let logTrace = appendName name logTrace0
@@ -36,10 +44,10 @@ measure_atomically logTrace0 name stm = do
     tend <- liftIO getMonotonicTimeNSec
     logDebug logTrace $ "leaving " <> name
     let tdiff = nominalDiffTimeToMicroseconds (tend - tstart)
-    logInfo logTrace $ "eval of " <> name <> " took " <> t_(show tdiff)
+    logInfo logTrace $ "eval of " <> name <> " took " <> t(show tdiff)
     return res
 
   where
-    t_ = pack
+    t = pack
 
 \end{code}

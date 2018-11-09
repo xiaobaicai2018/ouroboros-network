@@ -15,17 +15,23 @@ import           Cardano.BM.Trace (OutputKind (StdOut), TraceConfiguration (..),
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.QuickCheck (testProperty)
 import           Test.Tasty.HUnit (testCaseInfo)
+\end{code}
 
 
+\begin{code}
 tests :: TestTree
 tests = testGroup "testing Trace" [
       testProperty "minimal" prop_Trace_minimal
     , testCaseInfo "demonstrating nested named context logging" example_named
     ]
+\end{code}
 
+\begin{code}
 prop_Trace_minimal :: Bool
 prop_Trace_minimal = True
+\end{code}
 
+\begin{code}
 -- | example: named context trace
 example_named :: IO String
 example_named = do
@@ -43,4 +49,5 @@ example_named = do
         logInfo tr ("let's see: " `append` msg)
         when (msg == "42") $
                 complexWork1 (appendName "inner-work-1" tr) "done."
+
 \end{code}

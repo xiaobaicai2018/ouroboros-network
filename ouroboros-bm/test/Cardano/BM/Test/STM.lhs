@@ -20,4 +20,5 @@ tests = testGroup "observing STM actions" [
 
 prop_STM_observer :: Bool
 prop_STM_observer = True
+
 \end{code}
