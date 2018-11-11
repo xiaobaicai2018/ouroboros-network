@@ -27,9 +27,6 @@ module Cardano.BM.Trace
     , logNotice,  logNoticeS,  logNoticeP,  logNoticeUnsafeP
     , logWarning, logWarningS, logWarningP, logWarningUnsafeP
 
-    , TraceConfiguration (..)
-    , TraceTransformer (..)
-    , OutputKind (..)
     ) where
 
 
@@ -63,6 +60,7 @@ import           GHC.Word (Word64)
 
 import           Cardano.BM.Aggregation
 import           Cardano.BM.BaseTrace
+import           Cardano.BM.Data
 
 import           System.IO.Unsafe (unsafePerformIO)
 \end{code}
@@ -76,22 +74,13 @@ type Trace m = (TraceContext, TraceNamed m)
 \end{code}
 
 \subsubsection{TraceNamed}\label{code:TraceNamed}
-A |TraceNamed| is a trace of types |LogNamed| with payload |LogObject|.
+A |TraceNamed| is a trace of type \nameref{code:LogNamed} with payload \nameref{code:LogObject}.
 \begin{code}
 
 type TraceNamed m = BaseTrace m (LogNamed LogObject)
 \end{code}
 
-A |LogNamed| contains a list of context names and some log item.
 \begin{code}
-type ContextName = Text
-
--- Attach a 'ContextName' to something.
-data LogNamed item = LogNamed
-    { lnName :: [ContextName]
-    , lnItem :: item
-    } deriving (Show)
-
 -- add/modify named context
 modifyName
     :: ([ContextName] -> [ContextName])
@@ -110,30 +99,6 @@ named = contramap (LogNamed mempty)
 
 \end{code}
 
-\subsubsection{LogItem}\label{code:LogItem}
-\begin{code}
-
--- log item
-data LogItem = LogItem
-    { liSelection :: LogSelection
-    , liSeverity  :: Severity
-    , liPayload   :: Text   -- TODO should become ToObject
-    } deriving (Show, Generic, ToJSON)
-
--- output selection
-data LogSelection =
-      Public       -- only to public logs.
-    | PublicUnsafe -- only to public logs, not console.
-    | Private      -- only to private logs.
-    | Both         -- to public and private logs.
-    deriving (Show, Generic, ToJSON)
-
--- severity of log message
-data Severity = Debug | Info | Warning | Notice | Error
-                deriving (Show, Eq, Ord, Generic, ToJSON)
-
-\end{code}
-
 \todo[inline]{TODO remove |locallock|}
 %if False
 \begin{code}
@@ -145,26 +110,44 @@ locallock :: MVar ()
 locallock = unsafePerformIO $ newMVar ()
 \end{code}
 
-\subsubsection{Concrete Trace on stdout}
+\subsubsection{Concrete Trace on stdout}\label{code:stdoutTrace}
+
+This function returns a trace with an action of type "|(LogNamed LogObject) -> IO ()|"
+which will output a text message as text and all others as JSON encoded representation
+to the console.
+
 \begin{code}
 stdoutTrace :: TraceNamed IO
 stdoutTrace = BaseTrace $ Op $ \lognamed ->
     case lnItem lognamed of
         LP (LogMessage logItem) ->
             withMVar locallock $ \_ ->
-                TIO.putStrLn $ contextname (lnName lognamed) <> " :: " <> (liPayload logItem)
+                output (lnName lognamed) $ liPayload logItem
         obj ->
             withMVar locallock $ \_ ->
-                TIO.putStrLn $ contextname (lnName lognamed)
-                    <> " :: " <> toStrict (encodeToLazyText obj)
+                output (lnName lognamed) $ toStrict (encodeToLazyText obj)
   where
+    output nm msg = TIO.putStrLn $ contextname nm <> " :: " <> msg
     contextname :: [ContextName] -> Text
     contextname (y : ys) = foldl (\e a -> e <> "." <> a) y ys
     contextname []       = "(null name)"
 
 \end{code}
 
-\subsubsection{Enter messages into a trace}
+\subsubsection{Concrete Trace into a |TVar|}\label{code:traceInTVar}\label{code:traceInTVarIO}
+\begin{code}
+
+traceInTVar :: STM.TVar [LogObject] -> BaseTrace STM.STM LogObject
+traceInTVar tvar = BaseTrace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
+
+traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
+traceInTVarIO tvar = BaseTrace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
+\end{code}
+
+\subsubsection{Enter message into a trace}\label{code:traceNamedItem}
+The function |traceNamedItem| creates a |LogObject| and threads this through 
+the action defined in the |Trace|.
+
 \begin{code}
 
 traceNamedItem
@@ -213,56 +196,6 @@ logInfoUnsafeP logTrace    = traceNamedItem logTrace PublicUnsafe Info
 logNoticeUnsafeP logTrace  = traceNamedItem logTrace PublicUnsafe Notice
 logWarningUnsafeP logTrace = traceNamedItem logTrace PublicUnsafe Warning
 logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
-\end{code}
-
-\label{code:LogPrims}\label{LogObject}
-\begin{code}
-
-data LogPrims = LogMessage LogItem
-              | LogValue Text Integer
-                deriving (Generic, Show, ToJSON)
-
-data LogObject = LP LogPrims
-               | ObserveOpen CounterState
-               | ObserveClose CounterState [LogPrims]
-                 deriving (Generic, Show, ToJSON)
-\end{code}
-
-\begin{code}
-
-stmWithLog :: STM.STM t -> STM.STM (t, [LogObject])
-stmWithLog action = do
-    t <- action
-    return (t, [LP (LogMessage (LogItem Both Info "enter")),LP (LogMessage (LogItem Both Info "leave"))])
-\end{code}
-
-\begin{code}
-
-type Bytes = Integer
-
-data Counter = MonotonicClockTime Microsecond
-             | MemoryResidency Bytes
-               deriving (Show, Generic, ToJSON)
-
-instance ToJSON Microsecond where
-    toJSON = toJSON . toMicroseconds
-    toEncoding = toEncoding . toMicroseconds
-
-data CounterState = CounterState {
-    csIdentifier :: Unique
-  , csCounters :: [Counter]
-  }
-    deriving (Generic, Show, ToJSON)
-
-instance Generic Unique where
-
-instance ToJSON Unique where
-    toJSON = toJSON . hashUnique
-    toEncoding = toEncoding . hashUnique
-
-instance Show Unique where
-    show = show . hashUnique
-
 \end{code}
 
 \begin{spec}
@@ -329,17 +262,19 @@ readCounters NoTrace      = return []
 readCounters Neutral      = return []
 readCounters UntimedTrace = return []
 readCounters DropOpening  = return []
-readCounters (ObservableTrace set) = foldrM (\(sel, fun) a ->
-    if sel `member` set then (fun >>= \xs -> return $ a ++ xs) else return a) [] selectors
+readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
+    if sel `member` tts
+    then (fun >>= \xs -> return $ a ++ xs)
+    else return a) [] selectors
   where
     selectors = [(MonotonicClock, getMonoClock), (MemoryStats, readMemStats){-, (CPUTimeStats, readCPUTimeStats)-}]
     getMonoClock :: IO [Counter]
     getMonoClock = do
         t <- getMonotonicTimeNSec
-        let meas = MonotonicClockTime $ nominalDiffTimeToMicroseconds t
+        let meas = MonotonicClockTime "test" $ nominalDiffTimeToMicroseconds t
         return $ [meas]
     readMemStats :: IO [Counter]
-    readMemStats = return [MemoryResidency (-1), MemoryResidency (-2)]
+    readMemStats = return [MemoryResidency "one" (-1), MemoryResidency "two" (-2)]
 
 \end{code}
 
@@ -354,8 +289,25 @@ traceNamedObject (_, logTrace) = traceWith (named logTrace)
 \end{code}
 
 \begin{code}
+
+stmWithLog :: STM.STM (t, [LogObject]) -> STM.STM (t, [LogObject])
+stmWithLog action = action
+
+\end{code}
+
+\begin{code}
+
 bracketObserveIO :: Trace IO -> Text -> STM.STM t -> IO t
 bracketObserveIO logTrace0 name action = do
+    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    countersid <- observeOpen traceTransformer logTrace
+    -- run action, returns result only
+    t <- STM.atomically action
+    observeClose traceTransformer logTrace countersid []
+    pure t
+
+bracketObserveLogIO :: Trace IO -> Text -> STM.STM (t,[LogObject]) -> IO t
+bracketObserveLogIO logTrace0 name action = do
     (traceTransformer, logTrace) <- transformTrace name logTrace0
     countersid <- observeOpen traceTransformer logTrace
     -- run action, return result and log items
@@ -394,52 +346,22 @@ observeClose traceTransformer logTrace counterState logObjects = do
                                 (LP a) -> Just a
                                 _      -> Nothing)
 
+\end{code}
+
+\begin{code}
+
 nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
 nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 
 \end{code}
 
 \begin{code}
-data TraceTransformer = Neutral
-                      | UntimedTrace
-                      | NoTrace
-                      | DropOpening
-                      | ListTrace (STM.TVar [LogObject])
-                      | ObservableTrace (Set ObservableInstance)
-
-data ObservableInstance = MonotonicClock
-                        | MemoryStats
-                        | CPUTimeStats
-                          deriving (Eq, Ord)
-\end{code}
-
-\begin{code}
-
-traceInTVar :: STM.TVar [LogObject] -> BaseTrace STM.STM LogObject
-traceInTVar tvar = BaseTrace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
-
-traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
-traceInTVarIO tvar = BaseTrace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
-
 oracle :: Trace m -> Text -> IO TraceTransformer
 oracle (ctx, _) = getTraceTransformer ctx
 
 \end{code}
 
 \begin{code}
-
-type TraceContext = MVar TraceController
-data TraceController = TraceController {
-    traceTransformers :: Map Text TraceTransformer
-    }
-
-data TraceConfiguration = TraceConfiguration
-  { tcOutputKind       :: OutputKind
-  , tcName             :: Text
-  , tcTraceTransformer :: TraceTransformer
-  }
-
-data OutputKind = StdOut | Null deriving Eq
 
 emptyContext :: IO TraceContext
 emptyContext =
@@ -455,7 +377,7 @@ getTraceTransformer ctx name = do
 
 insertInOracle :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
 insertInOracle (ctx, _) name trans =
-    modifyMVar_ ctx (\(TraceController map) -> return $ TraceController $ insert name trans map)
+    modifyMVar_ ctx (\(TraceController mapping) -> return $ TraceController $ insert name trans mapping)
 
 transformTrace :: Text -> Trace IO -> IO (TraceTransformer, Trace IO)
 transformTrace name tr@(ctx, _) = do

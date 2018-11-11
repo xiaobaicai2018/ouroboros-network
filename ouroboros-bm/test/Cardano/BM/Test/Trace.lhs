@@ -9,8 +9,9 @@ module Cardano.BM.Test.Trace (
 import           Control.Monad (when)
 import           Data.Text (append)
 
-import           Cardano.BM.Trace (OutputKind (StdOut), TraceConfiguration (..),
-                    TraceTransformer (Neutral), appendName, logInfo, setupTrace)
+import           Cardano.BM.Data (OutputKind (StdOut), TraceConfiguration (..),
+                    TraceTransformer (Neutral))
+import           Cardano.BM.Trace (appendName, logInfo, setupTrace)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.QuickCheck (testProperty)
