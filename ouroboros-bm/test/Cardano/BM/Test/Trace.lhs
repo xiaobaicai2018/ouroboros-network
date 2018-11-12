@@ -11,15 +11,16 @@ module Cardano.BM.Test.Trace (
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
+import           Control.Concurrent (forkIO, threadDelay)
+import           Control.Monad (void)
 import           Data.Text (append)
 import           Data.Set (fromList)
 
-import           Cardano.BM.Data (LogObject (ObserveOpen), ObservableInstance (..),
-                    OutputKind (..), TraceConfiguration (..),
-                    TraceTransformer (..))
-import           Cardano.BM.Controller (insertInController, setupTrace)
+import           Cardano.BM.Data (LogNamed (..), LogObject (ObserveOpen), ObservableInstance (..),
+                    OutputKind (..), TraceConfiguration (..), TraceTransformer (..))
+import           Cardano.BM.Controller (insertInController, setupTrace, transformTrace)
 import           Cardano.BM.STM (bracketObserveIO)
-import           Cardano.BM.Trace (appendName, logInfo)
+import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.QuickCheck (Property, ioProperty, testProperty)
@@ -32,6 +33,8 @@ tests :: TestTree
 tests = testGroup "testing Trace" [
       testProperty "minimal" prop_Trace_minimal
     , testProperty "opening messages should not be traced" prop_noOpening_Trace
+    , testProperty "hierarchy testing" prop_hierarchy
+    , testProperty "forked Traces testing" prop_trace_in_fork
     , testCaseInfo "demonstrating nested named context logging" example_named
     ]
 \end{code}
@@ -63,15 +66,68 @@ example_named = do
         _ <- bracketObserveIO logTrace' "STM-action" setVar_
         logInfo logTrace' "let's see: done."
 
+prop_hierarchy :: Property
+prop_hierarchy = ioProperty $ do
+    msgs <- STM.newTVarIO []
+    trace0 <- setupTrace $ TraceConfiguration StdOut {-(TVarList msgs)-} "test" Neutral
+    logInfo trace0 "This should have been displayed!"
+
+    -- subtrace of trace which traces nothing
+    (_, trace1) <- transformTrace "inner" trace0
+    -- insertInController trace1 "inner" Neutral --NoTrace
+    logInfo trace1 "This should NOT have been displayed!"
+
+    -- let subtrace' = appendName "innest" trace1
+    -- insertInController subtrace' "innest" Neutral
+    -- (_, trace2) <- transformTrace "innest" subtrace'
+    -- logInfo trace2 "This should not have been displayed also since!"
+
+    -- res <- STM.readTVarIO msgs
+    -- putStrLn $ show res
+
+    return $ False --length res == 1
+
+prop_trace_in_fork :: Property
+prop_trace_in_fork = ioProperty $ do
+    msgs <- STM.newTVarIO []
+    trace <- setupTrace $ TraceConfiguration (TVarListNamed msgs) "test" DropOpening
+    -- trace <- setupTrace $ TraceConfiguration StdOut "test" Neutral
+    let trace0 = appendName "work0" trace
+    let trace1 = appendName "work1" trace
+    void $ forkIO $ work0 trace0
+    threadDelay 500000
+    void $ forkIO $ work1 trace1
+    threadDelay 3500000
+    res <- STM.readTVarIO msgs
+    let names@(_: namesTail) = map lnName res
+    putStrLn $ show $ names
+    return $ and $ zipWith (/=) names namesTail
+  where
+    work0 :: Trace IO -> IO ()
+    work0 trace = do
+        logInfo trace "1"
+        threadDelay 1000000
+        logInfo trace "2"
+        threadDelay 1000000
+        logInfo trace "3"
+        threadDelay 1000000
+    work1 :: Trace IO -> IO ()
+    work1 trace = do
+        logInfo trace "a"
+        threadDelay 1000000
+        logInfo trace "b"
+        threadDelay 1000000
+        logInfo trace "c"
+        threadDelay 1000000
+
 prop_noOpening_Trace :: Property
 prop_noOpening_Trace = ioProperty $ do
     msgs <- STM.newTVarIO []
     logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening
     _ <- bracketObserveIO logTrace "test" setVar_
     res <- STM.readTVarIO msgs
-    putStrLn $ show res
     -- |ObserveOpen| should be eliminated from tracing.
-    return $ and $ map (\case {ObserveOpen _ -> False; _ -> True}) res
+    return $ all (\case {ObserveOpen _ -> False; _ -> True}) res
 
 setVar_ :: STM.STM Integer
 setVar_ = do

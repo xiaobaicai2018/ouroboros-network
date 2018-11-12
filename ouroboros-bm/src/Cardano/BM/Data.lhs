@@ -81,11 +81,12 @@ data TraceTransformer = Neutral
                       | NoTrace
                       | DropOpening
                       | ObservableTrace (Set ObservableInstance)
+                        deriving (Show)
 
 data ObservableInstance = MonotonicClock
                         | MemoryStats
                         | CPUTimeStats
-                          deriving (Eq, Ord)
+                          deriving (Eq, Ord, Show)
 \end{code}
 
 \todo[inline]{TODO |lnName :: Text|\newline storing a concatenation of names
