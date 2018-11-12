@@ -31,7 +31,6 @@ unit_tests = testGroup "Unit tests" [
       , testCase "initial_0" unit_Aggregation_initial_zero
     ]
 
-
 prop_Aggregation_minimal :: Bool
 prop_Aggregation_minimal = True
 

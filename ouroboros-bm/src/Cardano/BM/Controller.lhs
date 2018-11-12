@@ -11,6 +11,7 @@ module Cardano.BM.Controller
     , withTrace
     , transformTrace
     , mapName2TTf
+    , insertInController
     ) where
 
 import           Control.Concurrent.MVar (modifyMVar_, newMVar, takeMVar)
@@ -26,7 +27,7 @@ import           Cardano.BM.Data (LogNamed (..), LogObject (..), OutputKind (..)
                      TraceConfiguration (..), TraceContext, TraceController (..),
                      TraceTransformer (..), TraceTransformerMap)
 import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
-                     stdoutTrace, traceInTVarIO, traceNamedObject)
+                     stdoutTrace, traceNamedObject)
 \end{code}
 %endif
 
@@ -88,8 +89,6 @@ transformTrace name tr@(ctx, _) = do
             case lnItem lognamed of
                 ObserveOpen _ -> return ()
                 obj           -> traceNamedObject tr obj))
-        ListTrace tvar    -> (traceTransformer, (ctx, traceInTVarIO tvar))
         ObservableTrace _ -> (traceTransformer, appendName name tr)
 
 \end{code}
-

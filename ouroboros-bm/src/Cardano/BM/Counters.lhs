@@ -35,7 +35,6 @@ readCounters NoTrace       = return []
 readCounters Neutral       = return []
 readCounters UntimedTrace  = return []
 readCounters DropOpening   = return []
-readCounters (ListTrace _) = return []
 readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
     if sel `member` tts
     then (fun >>= \xs -> return $ a ++ xs)

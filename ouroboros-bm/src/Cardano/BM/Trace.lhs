@@ -116,7 +116,7 @@ traceInTVarIO tvar = BaseTrace $ Op $ \ln ->
 \end{code}
 
 \subsubsection{Enter message into a trace}\label{code:traceNamedItem}
-The function |traceNamedItem| creates a |LogObject| and threads this through 
+The function |traceNamedItem| creates a |LogObject| and threads this through
 the action defined in the |Trace|.
 
 \begin{code}
@@ -220,4 +220,3 @@ traceNamedObject
 traceNamedObject (_, logTrace) = traceWith (named logTrace)
 
 \end{code}
-

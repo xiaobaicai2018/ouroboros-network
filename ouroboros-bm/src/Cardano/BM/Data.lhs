@@ -80,7 +80,6 @@ data TraceTransformer = Neutral
                       | UntimedTrace
                       | NoTrace
                       | DropOpening
-                      | ListTrace (STM.TVar [LogObject])
                       | ObservableTrace (Set ObservableInstance)
 
 data ObservableInstance = MonotonicClock

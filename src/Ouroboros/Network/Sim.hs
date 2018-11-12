@@ -32,9 +32,6 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (catMaybes)
 import qualified Data.Set as Set
 
-import qualified Control.Concurrent.STM.TVar as STM
-import qualified Control.Monad.STM as STM
-
 import           Control.Exception (assert)
 import           Control.Monad
 import           Control.Monad.Free (Free)
@@ -49,8 +46,10 @@ import           Ouroboros.Network.MonadClass.MonadSTM hiding (TVar)
 import qualified Ouroboros.Network.MonadClass.MonadSTM as MonadSTM
 import           Ouroboros.Network.MonadClass.MonadTimer
 
-import           Cardano.BM.STM (measure_atomically)
-import           Cardano.BM.Trace (emptyContext, logNotice, stdoutTrace)
+import           Cardano.BM.Controller (setupTrace)
+import           Cardano.BM.Data (OutputKind (..), TraceConfiguration (..),
+                     TraceTransformer (..))
+import           Cardano.BM.Trace (logNotice)
 
 {-# ANN module ("HLint: ignore Use readTVarIO"::String) #-}
 

@@ -140,4 +140,3 @@ observeClose traceTransformer logTrace (CounterState identifier _) logObjects = 
     forM_ logObjects $ traceNamedObject logTrace
 
 \end{code}
-
