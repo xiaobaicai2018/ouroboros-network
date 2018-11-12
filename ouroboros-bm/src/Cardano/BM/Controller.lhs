@@ -17,7 +17,6 @@ module Cardano.BM.Controller
 import           Control.Concurrent.MVar (modifyMVar_, newMVar, takeMVar)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
-import           Data.Bool (bool)
 import           Data.Functor.Contravariant (Op (..))
 import           Data.Map (findWithDefault, insert)
 import           Data.Text (Text)
@@ -27,7 +26,8 @@ import           Cardano.BM.Data (LogNamed (..), LogObject (..), OutputKind (..)
                      TraceConfiguration (..), TraceContext, TraceController (..),
                      TraceTransformer (..), TraceTransformerMap)
 import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
-                     stdoutTrace, traceNamedObject)
+                     stdoutTrace, traceInTVarIO, traceNamedInTVarIO,
+                     traceNamedObject)
 \end{code}
 %endif
 
@@ -36,7 +36,12 @@ import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
 setupTrace :: MonadIO m => TraceConfiguration -> m (Trace m)
 setupTrace (TraceConfiguration outputKind name traceTransformer) = do
     ctx <- liftIO $ newContext
-    let logTrace0 = bool noTrace (natTrace liftIO stdoutTrace) (outputKind == StdOut)
+    let logTrace0 = case outputKind of
+            StdOut             -> natTrace liftIO stdoutTrace
+            TVarList      tvar -> natTrace liftIO $ traceInTVarIO tvar
+            TVarListNamed tvar -> natTrace liftIO $ traceNamedInTVarIO tvar
+            Null               -> noTrace
+
     let logTrace = (ctx, logTrace0)
     liftIO $ insertInController logTrace name traceTransformer
     return $ appendName name logTrace

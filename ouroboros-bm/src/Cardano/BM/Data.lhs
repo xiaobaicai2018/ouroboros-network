@@ -177,6 +177,10 @@ data TraceConfiguration = TraceConfiguration
   , tcTraceTransformer :: TraceTransformer
   }
 
-data OutputKind = StdOut | Null deriving Eq
+data OutputKind = StdOut
+                | TVarList (STM.TVar [LogObject])
+                | TVarListNamed (STM.TVar [LogNamed LogObject])
+                | Null
+                deriving Eq
 
 \end{code}

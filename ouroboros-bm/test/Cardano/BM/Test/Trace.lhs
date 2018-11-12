@@ -15,11 +15,11 @@ import           Data.Text (append)
 import           Data.Set (fromList)
 
 import           Cardano.BM.Data (LogObject (ObserveOpen), ObservableInstance (..),
-                    OutputKind (StdOut), TraceConfiguration (..),
+                    OutputKind (..), TraceConfiguration (..),
                     TraceTransformer (..))
 import           Cardano.BM.Controller (insertInController, setupTrace)
 import           Cardano.BM.STM (bracketObserveIO)
-import           Cardano.BM.Trace (appendName, logInfo, traceInTVarIO)
+import           Cardano.BM.Trace (appendName, logInfo)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.QuickCheck (Property, ioProperty, testProperty)
@@ -65,10 +65,9 @@ example_named = do
 
 prop_noOpening_Trace :: Property
 prop_noOpening_Trace = ioProperty $ do
-    (ctx, _) <- setupTrace $ TraceConfiguration StdOut "test" DropOpening
     msgs <- STM.newTVarIO []
-    let tVarTrace = traceInTVarIO msgs
-    _ <- bracketObserveIO (ctx, tVarTrace) "test" setVar_
+    logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening
+    _ <- bracketObserveIO logTrace "test" setVar_
     res <- STM.readTVarIO msgs
     putStrLn $ show res
     -- |ObserveOpen| should be eliminated from tracing.

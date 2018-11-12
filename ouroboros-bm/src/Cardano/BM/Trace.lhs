@@ -16,6 +16,7 @@ module Cardano.BM.Trace
     , noTrace
     , traceInTVar
     , traceInTVarIO
+    , traceNamedInTVarIO
     -- * context naming
     , appendName
     -- * utils
@@ -107,12 +108,16 @@ stdoutTrace = BaseTrace $ Op $ \lognamed ->
 \subsubsection{Concrete Trace into a |TVar|}\label{code:traceInTVar}\label{code:traceInTVarIO}
 \begin{code}
 
-traceInTVar :: STM.TVar [LogObject] -> BaseTrace STM.STM LogObject
+traceInTVar :: STM.TVar [a] -> BaseTrace STM.STM a
 traceInTVar tvar = BaseTrace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
 
 traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
 traceInTVarIO tvar = BaseTrace $ Op $ \ln ->
                          STM.atomically $ STM.modifyTVar tvar ((:) (lnItem ln))
+
+traceNamedInTVarIO :: STM.TVar [LogNamed LogObject] -> TraceNamed IO
+traceNamedInTVarIO tvar = BaseTrace $ Op $ \ln ->
+                         STM.atomically $ STM.modifyTVar tvar ((:) ln)
 \end{code}
 
 \subsubsection{Enter message into a trace}\label{code:traceNamedItem}
