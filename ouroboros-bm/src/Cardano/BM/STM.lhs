@@ -1,27 +1,38 @@
 
-\subsection{STM}
+\subsection{Cardano.BM.STM}
 
+%if False
 \begin{code}
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.BM.STM
     (
-      measure_atomically
+      bracketObserveIO
+    , bracketObserveLogIO
+    -- * to be removed
+    , measure_atomically
     ) where
 
+import           Control.Monad (forM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
 import           Data.Monoid ((<>))
 import           Data.Text
 import           Data.Time.Units (Microsecond, fromMicroseconds)
+import           Data.Unique (hashUnique, newUnique)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
+import           Cardano.BM.Data (CounterState (..), LogObject (..),
+                     TraceTransformer (..))
+import           Cardano.BM.Controller (transformTrace)
+import           Cardano.BM.Counters (readCounters)
+import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo,
+                     traceNamedObject)
 \end{code}
-
+%endif
 
 \begin{code}
 nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
@@ -34,6 +45,7 @@ nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 \end{code}
 %endif
 
+\todo[inline]{remove the function |measure_atomically| which only serves some preliminary testing}
 \begin{code}
 measure_atomically :: (MonadIO m) => Trace m -> Text -> STM.STM a -> m a
 measure_atomically logTrace0 name stm = do
@@ -51,3 +63,81 @@ measure_atomically logTrace0 name stm = do
     t = pack
 
 \end{code}
+
+\begin{code}
+
+stmWithLog :: STM.STM (t, [LogObject]) -> STM.STM (t, [LogObject])
+stmWithLog action = action
+
+\end{code}
+
+\begin{code}
+
+bracketObserveIO :: Trace IO -> Text -> STM.STM t -> IO t
+bracketObserveIO logTrace0 name action = do
+    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    bracketObserveIO' traceTransformer logTrace action
+
+bracketObserveIO' :: TraceTransformer -> Trace IO -> STM.STM t -> IO t
+bracketObserveIO' NoTrace _ action =
+    STM.atomically action
+bracketObserveIO' traceTransformer logTrace action = do
+    countersid <- observeOpen traceTransformer logTrace
+    -- run action, returns result only
+    t <- STM.atomically action
+    observeClose traceTransformer logTrace countersid []
+    pure t
+
+\end{code}
+
+\begin{code}
+
+bracketObserveLogIO :: Trace IO -> Text -> STM.STM (t,[LogObject]) -> IO t
+bracketObserveLogIO logTrace0 name action = do
+    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    bracketObserveLogIO' traceTransformer logTrace action
+
+bracketObserveLogIO' :: TraceTransformer -> Trace IO -> STM.STM (t,[LogObject]) -> IO t
+bracketObserveLogIO' NoTrace _ action = do
+    (t, _) <- STM.atomically $ stmWithLog action
+    pure t
+bracketObserveLogIO' traceTransformer logTrace action = do
+    countersid <- observeOpen traceTransformer logTrace
+    -- run action, return result and log items
+    (t, as) <- STM.atomically $ stmWithLog action
+    observeClose traceTransformer logTrace countersid as
+    pure t
+
+\end{code}
+
+\begin{code}
+
+observeOpen :: TraceTransformer -> Trace IO -> IO CounterState
+observeOpen traceTransformer logTrace = do
+    identifier <- newUnique
+    logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
+
+    -- take measurement
+    counters <- readCounters traceTransformer
+    let state = CounterState identifier counters
+    -- send opening message to Trace
+    traceNamedObject logTrace $ ObserveOpen state
+    return state
+
+\end{code}
+
+\begin{code}
+
+observeClose :: TraceTransformer -> Trace IO -> CounterState -> [LogObject] -> IO ()
+observeClose traceTransformer logTrace (CounterState identifier _) logObjects = do
+    logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
+
+    -- take measurement
+    counters <- readCounters traceTransformer
+    -- send closing message to Trace
+    traceNamedObject logTrace $ ObserveClose (CounterState identifier counters)
+    -- trace the messages gathered from inside the action
+    forM_ logObjects $ traceNamedObject logTrace
+
+\end{code}
+

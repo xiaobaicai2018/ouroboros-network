@@ -69,6 +69,10 @@ examples ...
 
 %include Cardano//BM//Trace.lhs
 
+%include Cardano//BM//Controller.lhs
+
+%include Cardano//BM//Counters.lhs
+
 %include Cardano//BM//Data.lhs
 
 \end{document}

@@ -1,5 +1,5 @@
 
-\subsection{Trace}
+\subsection{Cardano.BM.Trace}
 
 %if False
 \begin{code}
@@ -12,15 +12,16 @@
 module Cardano.BM.Trace
     (
       Trace
-    , setupTrace
     , stdoutTrace
     , noTrace
-    , emptyContext
+    , traceInTVar
+    , traceInTVarIO
     -- * context naming
     , appendName
     -- * utils
     , natTrace
     -- * log functions
+    , traceNamedObject
     , logDebug,   logDebugS,   logDebugP,   logDebugUnsafeP
     , logError,   logErrorS,   logErrorP,   logErrorUnsafeP
     , logInfo,    logInfoS,    logInfoP,    logInfoUnsafeP
@@ -30,32 +31,22 @@ module Cardano.BM.Trace
     ) where
 
 
-import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, takeMVar,
-                     withMVar)
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 
 import qualified Control.Concurrent.STM.TVar as STM
-import           Control.Monad (forM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
-import           Data.Aeson (ToJSON, toEncoding, toJSON)
 import           Data.Aeson.Text (encodeToLazyText)
-import           Data.Bool (bool)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
-import           Data.Foldable (foldrM)
-import           Data.Map (Map, findWithDefault, insert)
-import           Data.Maybe (mapMaybe)
 import           Data.Monoid ((<>))
-import           Data.Set (Set, fromList, member)
+import           Data.Set (Set, fromList)
 import           Data.Text (Text, pack)
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
-import           Data.Time.Clock.POSIX (POSIXTime, getPOSIXTime)
-import           Data.Time.Units (Microsecond, fromMicroseconds, toMicroseconds)
-import           Data.Unique (Unique, hashUnique, newUnique)
+import           Data.Time.Units (Microsecond, fromMicroseconds)
 
 import           GHC.Clock (getMonotonicTimeNSec)
-import           GHC.Generics (Generic)
 import           GHC.Word (Word64)
 
 import           Cardano.BM.Aggregation
@@ -65,20 +56,6 @@ import           Cardano.BM.Data
 import           System.IO.Unsafe (unsafePerformIO)
 \end{code}
 %endif
-
-\subsubsection{Trace}\label{code:Trace}
-A |Trace| consists of a \nameref{code:TraceContext} and a \nameref{code:TraceNamed} in |m|.
-\begin{code}
-
-type Trace m = (TraceContext, TraceNamed m)
-\end{code}
-
-\subsubsection{TraceNamed}\label{code:TraceNamed}
-A |TraceNamed| is a trace of type \nameref{code:LogNamed} with payload \nameref{code:LogObject}.
-\begin{code}
-
-type TraceNamed m = BaseTrace m (LogNamed LogObject)
-\end{code}
 
 \begin{code}
 -- add/modify named context
@@ -141,7 +118,8 @@ traceInTVar :: STM.TVar [LogObject] -> BaseTrace STM.STM LogObject
 traceInTVar tvar = BaseTrace $ Op $ \a -> STM.modifyTVar tvar ((:) a)
 
 traceInTVarIO :: STM.TVar [LogObject] -> TraceNamed IO
-traceInTVarIO tvar = BaseTrace $ Op $ \lognamed -> STM.atomically $ STM.modifyTVar tvar ((:) (lnItem lognamed))
+traceInTVarIO tvar = BaseTrace $ Op $ \ln ->
+                         STM.atomically $ STM.modifyTVar tvar ((:) (lnItem ln))
 \end{code}
 
 \subsubsection{Enter message into a trace}\label{code:traceNamedItem}
@@ -241,157 +219,11 @@ exampleConfiguration = withTrace (TraceConfiguration StdOut "my_example" (Observ
 
 \begin{code}
 
-setupTrace :: MonadIO m => TraceConfiguration -> m (Trace m)
-setupTrace (TraceConfiguration outputKind name traceTransformer) = do
-    ctx <- liftIO $ emptyContext
-    let logTrace0 = bool noTrace (natTrace liftIO stdoutTrace) (outputKind == StdOut)
-    let logTrace = (ctx, logTrace0)
-    liftIO $ insertInOracle logTrace name traceTransformer
-    return $ appendName name logTrace
-
-withTrace :: MonadIO m =>  TraceConfiguration -> (Trace m -> m t) -> m t
-withTrace cfg action = do
-    logTrace <- setupTrace cfg
-    action logTrace
-\end{code}
-
-\begin{code}
-
-readCounters :: TraceTransformer -> IO [Counter]
-readCounters NoTrace      = return []
-readCounters Neutral      = return []
-readCounters UntimedTrace = return []
-readCounters DropOpening  = return []
-readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
-    if sel `member` tts
-    then (fun >>= \xs -> return $ a ++ xs)
-    else return a) [] selectors
-  where
-    selectors = [(MonotonicClock, getMonoClock), (MemoryStats, readMemStats){-, (CPUTimeStats, readCPUTimeStats)-}]
-    getMonoClock :: IO [Counter]
-    getMonoClock = do
-        t <- getMonotonicTimeNSec
-        let meas = MonotonicClockTime "test" $ nominalDiffTimeToMicroseconds t
-        return $ [meas]
-    readMemStats :: IO [Counter]
-    readMemStats = return [MemoryResidency "one" (-1), MemoryResidency "two" (-2)]
-
-\end{code}
-
-\begin{code}
-
 traceNamedObject
     :: Trace m
     -> LogObject
     -> m ()
 traceNamedObject (_, logTrace) = traceWith (named logTrace)
-
-\end{code}
-
-\begin{code}
-
-stmWithLog :: STM.STM (t, [LogObject]) -> STM.STM (t, [LogObject])
-stmWithLog action = action
-
-\end{code}
-
-\begin{code}
-
-bracketObserveIO :: Trace IO -> Text -> STM.STM t -> IO t
-bracketObserveIO logTrace0 name action = do
-    (traceTransformer, logTrace) <- transformTrace name logTrace0
-    countersid <- observeOpen traceTransformer logTrace
-    -- run action, returns result only
-    t <- STM.atomically action
-    observeClose traceTransformer logTrace countersid []
-    pure t
-
-bracketObserveLogIO :: Trace IO -> Text -> STM.STM (t,[LogObject]) -> IO t
-bracketObserveLogIO logTrace0 name action = do
-    (traceTransformer, logTrace) <- transformTrace name logTrace0
-    countersid <- observeOpen traceTransformer logTrace
-    -- run action, return result and log items
-    (t, as) <- STM.atomically $ stmWithLog action
-    observeClose traceTransformer logTrace countersid as
-    pure t
-
-observeOpen :: TraceTransformer -> Trace IO -> IO CounterState
-observeOpen traceTransformer logTrace = do
-    identifier <- newUnique
-    logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
-
-    -- take measurement
-    counters <- readCounters traceTransformer
-    let state = CounterState identifier counters
-    -- send opening message to Trace
-    traceNamedObject logTrace $ ObserveOpen state
-    return state
-
-observeClose :: TraceTransformer -> Trace IO -> CounterState -> [LogObject] -> IO ()
-observeClose traceTransformer logTrace counterState logObjects = do
-    let identifier = csIdentifier counterState
-    logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
-    let msgs = filterPrims logObjects
-
-    -- take measurement
-    counters <- readCounters traceTransformer
-    let state = CounterState identifier counters
-    -- send closing message to Trace
-    traceNamedObject logTrace $ ObserveClose state msgs
-    -- trace the messages gathered from inside the action
-    forM_ msgs $ traceNamedObject logTrace . LP
-  where
-    filterPrims :: [LogObject] -> [LogPrims]
-    filterPrims = mapMaybe (\case
-                                (LP a) -> Just a
-                                _      -> Nothing)
-
-\end{code}
-
-\begin{code}
-
-nominalDiffTimeToMicroseconds :: Word64 -> Microsecond
-nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
-
-\end{code}
-
-\begin{code}
-oracle :: Trace m -> Text -> IO TraceTransformer
-oracle (ctx, _) = getTraceTransformer ctx
-
-\end{code}
-
-\begin{code}
-
-emptyContext :: IO TraceContext
-emptyContext =
-    newMVar $ TraceController $ mempty
-
-getTraceContext :: TraceContext -> IO (Map Text TraceTransformer)
-getTraceContext ctx = traceTransformers <$> takeMVar ctx
-
-getTraceTransformer :: TraceContext -> Text -> IO TraceTransformer
-getTraceTransformer ctx name = do
-    transformers <- getTraceContext ctx
-    return $ findWithDefault Neutral name transformers
-
-insertInOracle :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
-insertInOracle (ctx, _) name trans =
-    modifyMVar_ ctx (\(TraceController mapping) -> return $ TraceController $ insert name trans mapping)
-
-transformTrace :: Text -> Trace IO -> IO (TraceTransformer, Trace IO)
-transformTrace name tr@(ctx, _) = do
-    traceTransformer <- oracle tr name
-    return $ case traceTransformer of
-        Neutral      -> (traceTransformer, appendName name tr)
-        UntimedTrace -> (traceTransformer, appendName name tr)
-        NoTrace      -> (traceTransformer, (ctx, BaseTrace $ Op $ \_ -> pure ()))
-        DropOpening  -> (traceTransformer, (ctx, BaseTrace $ Op $ \lognamed ->
-            case lnItem lognamed of
-                ObserveOpen _ -> return ()
-                obj           -> traceNamedObject tr obj))
-        ListTrace tvar    -> (traceTransformer, (ctx, traceInTVarIO tvar))
-        ObservableTrace _ -> (traceTransformer, appendName name tr)
 
 \end{code}
 

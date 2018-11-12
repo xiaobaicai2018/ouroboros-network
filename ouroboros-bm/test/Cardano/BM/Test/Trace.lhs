@@ -11,7 +11,8 @@ import           Data.Text (append)
 
 import           Cardano.BM.Data (OutputKind (StdOut), TraceConfiguration (..),
                     TraceTransformer (Neutral))
-import           Cardano.BM.Trace (appendName, logInfo, setupTrace)
+import           Cardano.BM.Controller (setupTrace)
+import           Cardano.BM.Trace (appendName, logInfo)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.QuickCheck (testProperty)

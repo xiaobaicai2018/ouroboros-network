@@ -7,6 +7,26 @@
 {-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.BM.Data
+  (
+    Trace (..)
+  , TraceNamed (..)
+  , TraceConfiguration (..)
+  , TraceContext (..)
+  , TraceController (..)
+  , TraceTransformer (..)
+  , TraceTransformerMap
+  , ContextName
+  , OutputKind (..)
+  , LogPrims (..)
+  , LogObject (..)
+  , ObservableInstance (..)
+  , LogNamed (..)
+  , LogItem (..)
+  , LogSelection (..)
+  , Severity (..)
+  , Counter (..)
+  , CounterState (..)
+  )
   where
 
 import qualified Control.Concurrent.STM.TVar as STM
@@ -22,6 +42,22 @@ import           Data.Unique (Unique, hashUnique)
 
 import           GHC.Generics (Generic)
 
+import           Cardano.BM.BaseTrace
+
+\end{code}
+
+\subsubsection{Trace}\label{code:Trace}
+A |Trace| consists of a \nameref{code:TraceContext} and a \nameref{code:TraceNamed} in |m|.
+\begin{code}
+
+type Trace m = (TraceContext, TraceNamed m)
+\end{code}
+
+\subsubsection{TraceNamed}\label{code:TraceNamed}
+A |TraceNamed| is a trace of type \nameref{code:LogNamed} with payload \nameref{code:LogObject}.
+\begin{code}
+
+type TraceNamed m = BaseTrace m (LogNamed LogObject)
 \end{code}
 
 \subsubsection{LogObject}\label{code:LogObject}
@@ -34,7 +70,7 @@ data LogPrims = LogMessage LogItem
 
 data LogObject = LP LogPrims
                | ObserveOpen CounterState
-               | ObserveClose CounterState [LogPrims]
+               | ObserveClose CounterState
                  deriving (Generic, Show, ToJSON)
 \end{code}
 
@@ -128,8 +164,9 @@ instance Show Unique where
 \begin{code}
 
 type TraceContext = MVar TraceController
+type TraceTransformerMap = Map Text TraceTransformer
 data TraceController = TraceController {
-    traceTransformers :: Map Text TraceTransformer
+    traceTransformers :: TraceTransformerMap
     }
 \end{code}
 

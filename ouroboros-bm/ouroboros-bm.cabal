@@ -16,6 +16,8 @@ library
   exposed-modules:
                        Cardano.BM.Aggregation
                        Cardano.BM.BaseTrace
+                       Cardano.BM.Controller
+                       Cardano.BM.Counters
                        Cardano.BM.Data
                        Cardano.BM.STM
                        Cardano.BM.Trace
