@@ -8,10 +8,10 @@
 
 module Cardano.BM.Data
   (
-    Trace (..)
-  , TraceNamed (..)
+    Trace
+  , TraceNamed
   , TraceConfiguration (..)
-  , TraceContext (..)
+  , TraceContext
   , TraceController (..)
   , TraceTransformer (..)
   , TraceTransformerMap
@@ -144,19 +144,18 @@ instance ToJSON Microsecond where
     toEncoding = toEncoding . toMicroseconds
 
 data CounterState = CounterState {
-    csIdentifier :: Unique
-  , csCounters :: [Counter]
-  }
-    deriving (Generic, Show, ToJSON)
-
-instance Generic Unique where
+      csIdentifier :: Unique
+    , csCounters :: [Counter]
+    }
+    deriving (Generic, ToJSON)
 
 instance ToJSON Unique where
     toJSON = toJSON . hashUnique
     toEncoding = toEncoding . hashUnique
 
-instance Show Unique where
-    show = show . hashUnique
+instance Show CounterState where
+    show cs = (show . hashUnique) (csIdentifier cs)
+           <> " => " <> (show $ csCounters cs)
 
 \end{code}
 

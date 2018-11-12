@@ -7,7 +7,9 @@ module Cardano.BM.Aggregation
   , Stats (..)
   , updateAggregation
   ) where
+\end{code}
 
+\begin{code}
 
 data Stats = Stats {
     fmin   :: Integer,

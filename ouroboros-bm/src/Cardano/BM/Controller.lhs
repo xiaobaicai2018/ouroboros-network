@@ -17,20 +17,16 @@ import           Control.Concurrent.MVar (modifyMVar_, newMVar, takeMVar)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 import           Data.Bool (bool)
-import           Data.Foldable (foldrM)
-import           Data.Functor.Contravariant (Contravariant (..), Op (..))
+import           Data.Functor.Contravariant (Op (..))
 import           Data.Map (findWithDefault, insert)
-import           Data.Maybe (mapMaybe)
-import           Data.Monoid ((<>))
-import           Data.Set (member)
-import           Data.Text
+import           Data.Text (Text)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data (LogNamed (..), LogObject (..), OutputKind (..),
-                     TraceConfiguration (..), TraceContext (..),
-                     TraceController (..), TraceTransformer (..),
-                     TraceTransformerMap)
-import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace, stdoutTrace, traceInTVarIO, traceNamedObject)
+                     TraceConfiguration (..), TraceContext, TraceController (..),
+                     TraceTransformer (..), TraceTransformerMap)
+import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
+                     stdoutTrace, traceInTVarIO, traceNamedObject)
 \end{code}
 %endif
 

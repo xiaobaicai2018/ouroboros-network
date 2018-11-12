@@ -11,15 +11,12 @@ module Cardano.BM.Counters
     ) where
 
 import           Data.Foldable (foldrM)
-import           Data.Monoid ((<>))
 import           Data.Set (member)
-import           Data.Text
 import           Data.Time.Units (Microsecond, fromMicroseconds)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
 import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
                      TraceTransformer (..))
 \end{code}
@@ -34,10 +31,11 @@ nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 \begin{code}
 
 readCounters :: TraceTransformer -> IO [Counter]
-readCounters NoTrace      = return []
-readCounters Neutral      = return []
-readCounters UntimedTrace = return []
-readCounters DropOpening  = return []
+readCounters NoTrace       = return []
+readCounters Neutral       = return []
+readCounters UntimedTrace  = return []
+readCounters DropOpening   = return []
+readCounters (ListTrace _) = return []
 readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
     if sel `member` tts
     then (fun >>= \xs -> return $ a ++ xs)

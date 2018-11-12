@@ -34,22 +34,15 @@ module Cardano.BM.Trace
 import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 
 import qualified Control.Concurrent.STM.TVar as STM
-import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
 import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
-import           Data.Set (Set, fromList)
-import           Data.Text (Text, pack)
+import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
-import           Data.Time.Units (Microsecond, fromMicroseconds)
 
-import           GHC.Clock (getMonotonicTimeNSec)
-import           GHC.Word (Word64)
-
-import           Cardano.BM.Aggregation
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data
 
@@ -140,11 +133,12 @@ traceNamedItem (_, logTrace) p s m =
                                                            , liPayload   = m
                                                            }
 
+{-
 logMessage, logMessageS, logMessageP :: Trace m -> Severity -> Text -> m ()
 logMessage logTrace  = traceNamedItem logTrace Both
 logMessageS logTrace = traceNamedItem logTrace Private
 logMessageP logTrace = traceNamedItem logTrace Public
-
+-}
 logDebug, logInfo, logNotice, logWarning, logError
     :: Trace m -> Text -> m ()
 logDebug logTrace   = traceNamedItem logTrace Both Debug
