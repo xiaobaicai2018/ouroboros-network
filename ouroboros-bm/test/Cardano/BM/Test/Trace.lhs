@@ -13,7 +13,7 @@ import qualified Control.Monad.STM as STM
 
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Monad (void)
-import           Data.Text (append)
+import           Data.Text (Text, append)
 import           Data.Set (fromList)
 
 import           Cardano.BM.Data (LogNamed (..), LogObject (ObserveOpen), ObservableInstance (..),
@@ -23,20 +23,26 @@ import           Cardano.BM.STM (bracketObserveIO)
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
 import           Test.Tasty (TestTree, testGroup)
-import           Test.Tasty.QuickCheck (Property, ioProperty, testProperty)
-import           Test.Tasty.HUnit (testCaseInfo)
+import           Test.Tasty.QuickCheck (testProperty)
+import           Test.Tasty.HUnit (Assertion, assertBool, testCase, testCaseInfo)
 \end{code}
 
 
 \begin{code}
 tests :: TestTree
 tests = testGroup "testing Trace" [
-      testProperty "minimal" prop_Trace_minimal
-    , testProperty "opening messages should not be traced" prop_noOpening_Trace
-    , testProperty "hierarchy testing" prop_hierarchy
-    , testProperty "forked Traces testing" prop_trace_in_fork
-    , testCaseInfo "demonstrating nested named context logging" example_named
-    ]
+        testProperty "minimal" prop_Trace_minimal
+      , unit_tests
+      , testCaseInfo "demonstrating nested named context logging" example_named
+      ]
+
+unit_tests :: TestTree
+unit_tests = testGroup "Unit tests" [
+        testCase "opening messages should not be traced" unit_noOpening_Trace
+      , testCase "hierarchy testing" unit_hierarchy
+      , testCase "forked Traces testing" unit_trace_in_fork
+      ]
+
 \end{code}
 
 \begin{code}
@@ -66,68 +72,67 @@ example_named = do
         _ <- bracketObserveIO logTrace' "STM-action" setVar_
         logInfo logTrace' "let's see: done."
 
-prop_hierarchy :: Property
-prop_hierarchy = ioProperty $ do
+unit_hierarchy :: Assertion
+unit_hierarchy = do
     msgs <- STM.newTVarIO []
-    trace0 <- setupTrace $ TraceConfiguration StdOut {-(TVarList msgs)-} "test" Neutral
+    trace0 <- setupTrace $ TraceConfiguration (TVarList msgs) "test" Neutral
     logInfo trace0 "This should have been displayed!"
 
     -- subtrace of trace which traces nothing
+    insertInController trace0 "inner" NoTrace
     (_, trace1) <- transformTrace "inner" trace0
-    -- insertInController trace1 "inner" Neutral --NoTrace
     logInfo trace1 "This should NOT have been displayed!"
 
-    -- let subtrace' = appendName "innest" trace1
-    -- insertInController subtrace' "innest" Neutral
-    -- (_, trace2) <- transformTrace "innest" subtrace'
-    -- logInfo trace2 "This should not have been displayed also since!"
+    insertInController trace1 "innest" Neutral
+    (_, trace2) <- transformTrace "innest" trace1
+    logInfo trace2 "This should NOT have been displayed also due to the trace one level above!"
 
-    -- res <- STM.readTVarIO msgs
-    -- putStrLn $ show res
+    -- acquire the traced objects
+    res <- STM.readTVarIO msgs
 
-    return $ False --length res == 1
+    -- only the first message should have been traced
+    assertBool
+        ("Found more or less messages than expected: " ++ show res)
+        (length res == 1)
 
-prop_trace_in_fork :: Property
-prop_trace_in_fork = ioProperty $ do
+unit_trace_in_fork :: Assertion
+unit_trace_in_fork = do
     msgs <- STM.newTVarIO []
     trace <- setupTrace $ TraceConfiguration (TVarListNamed msgs) "test" DropOpening
-    -- trace <- setupTrace $ TraceConfiguration StdOut "test" Neutral
     let trace0 = appendName "work0" trace
     let trace1 = appendName "work1" trace
-    void $ forkIO $ work0 trace0
+    void $ forkIO $ work trace0
     threadDelay 500000
-    void $ forkIO $ work1 trace1
+    void $ forkIO $ work trace1
     threadDelay 3500000
+
     res <- STM.readTVarIO msgs
     let names@(_: namesTail) = map lnName res
-    putStrLn $ show $ names
-    return $ and $ zipWith (/=) names namesTail
+    -- each trace should have its own name and log right after the other
+    assertBool
+        ("Consecutive loggernames are not different: " ++ show names)
+        (and $ zipWith (/=) names namesTail)
   where
-    work0 :: Trace IO -> IO ()
-    work0 trace = do
-        logInfo trace "1"
-        threadDelay 1000000
-        logInfo trace "2"
-        threadDelay 1000000
-        logInfo trace "3"
-        threadDelay 1000000
-    work1 :: Trace IO -> IO ()
-    work1 trace = do
-        logInfo trace "a"
-        threadDelay 1000000
-        logInfo trace "b"
-        threadDelay 1000000
-        logInfo trace "c"
+    work :: Trace IO -> IO ()
+    work trace = do
+        logInfoDelay trace "1"
+        logInfoDelay trace "2"
+        logInfoDelay trace "3"
+    logInfoDelay :: Trace IO -> Text -> IO ()
+    logInfoDelay trace msg =
+        logInfo trace msg >>
         threadDelay 1000000
 
-prop_noOpening_Trace :: Property
-prop_noOpening_Trace = ioProperty $ do
+unit_noOpening_Trace :: Assertion
+unit_noOpening_Trace = do
     msgs <- STM.newTVarIO []
     logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening
     _ <- bracketObserveIO logTrace "test" setVar_
     res <- STM.readTVarIO msgs
     -- |ObserveOpen| should be eliminated from tracing.
-    return $ all (\case {ObserveOpen _ -> False; _ -> True}) res
+    assertBool
+        "Found non-expected ObserveOpen message"
+        (all (\case {ObserveOpen _ -> False; _ -> True}) res)
 
 setVar_ :: STM.STM Integer
 setVar_ = do

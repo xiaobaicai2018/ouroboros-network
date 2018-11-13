@@ -14,7 +14,7 @@ module Cardano.BM.Controller
     , insertInController
     ) where
 
-import           Control.Concurrent.MVar (modifyMVar_, newMVar, takeMVar, withMVar)
+import           Control.Concurrent.MVar (modifyMVar_, newMVar, withMVar)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 import           Data.Functor.Contravariant (Op (..))
@@ -67,7 +67,7 @@ newContext =
     newMVar $ TraceController $ mempty
 
 getTraceContext :: TraceContext -> IO (TraceTransformerMap)
-getTraceContext ctx = traceTransformers <$> takeMVar ctx
+getTraceContext ctx = withMVar ctx $ return . traceTransformers
 
 findTraceTransformer :: TraceContext -> Text -> IO TraceTransformer
 findTraceTransformer ctx name = do
@@ -76,8 +76,6 @@ findTraceTransformer ctx name = do
 
 insertInController :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
 insertInController (ctx, _) name trans = do
-    putStrLn "Acquiring MVar"
-    -- withMVar ctx (\(TraceController mapping) -> putStrLn $ "mapping: " ++ show mapping)
     modifyMVar_ ctx (\(TraceController mapping) -> return $ TraceController $ insert name trans mapping)
 
 \end{code}
