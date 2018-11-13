@@ -32,12 +32,14 @@ library
                        clock,
                        containers,
                        contravariant,
+                       filepath,
                        mtl,
                        stm,
                        text,
                        time,
                        time-units,
                        transformers,
+		       unix,
                        unordered-containers
 
   ghc-options:         -Wall

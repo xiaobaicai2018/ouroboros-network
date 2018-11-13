@@ -75,6 +75,8 @@ data LogObject = LP LogPrims
 \end{code}
 
 \subsubsection{TraceTransformer}\label{code:TraceTransformer}
+
+
 \begin{code}
 data TraceTransformer = Neutral
                       | UntimedTrace
@@ -85,7 +87,8 @@ data TraceTransformer = Neutral
 
 data ObservableInstance = MonotonicClock
                         | MemoryStats
-                        | CPUTimeStats
+                        | ProcessStats
+                        | IOStats
                           deriving (Eq, Ord, Show)
 \end{code}
 
@@ -133,10 +136,12 @@ data Severity = Debug | Info | Warning | Notice | Error
 \subsubsection{Observable}\label{code:CounterState}
 \begin{code}
 
-type Bytes = Integer
 
 data Counter = MonotonicClockTime Text Microsecond
-             | MemoryResidency Text Bytes
+             | MemoryCounter Text Integer
+             | StatInfo Text Integer
+             | IOCounter Text Integer
+             | CpuCounter Text Integer
                deriving (Show, Generic, ToJSON)
 
 instance ToJSON Microsecond where

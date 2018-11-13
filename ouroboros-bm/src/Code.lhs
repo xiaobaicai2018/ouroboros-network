@@ -50,16 +50,21 @@ examples ...
 
 \section{Code listings}
 
-% \begin{code}
-% module Code
-%   (
-%   ) where
-% 
-% import qualified Cardano.BM.Aggregation
-% import qualified Cardano.BM.STM
-% import qualified Cardano.BM.Trace
-% 
-% \end{code}
+%if False
+\begin{code}
+module Code
+where
+
+import qualified Cardano.BM.Aggregation
+import qualified Cardano.BM.BaseTrace
+import qualified Cardano.BM.Controller
+import qualified Cardano.BM.Counters
+import qualified Cardano.BM.Data
+import qualified Cardano.BM.STM
+import qualified Cardano.BM.Trace
+ 
+\end{code}
+%endif
 
 %include Cardano//BM//Aggregation.lhs
 
