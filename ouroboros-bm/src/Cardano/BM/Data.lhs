@@ -167,10 +167,13 @@ instance Show CounterState where
 \subsubsection{TraceContext}\label{code:TraceContext}
 \begin{code}
 
-type TraceContext = MVar TraceController
+type TraceContext = {-data loggerName and-}MVar TraceController
 type TraceTransformerMap = Map Text TraceTransformer
+-- type SeverityMap = Map Text Severity
 data TraceController = TraceController {
     traceTransformers :: TraceTransformerMap
+    -- minSeverity :: SeverityMap
+    -- ...
     }
 \end{code}
 

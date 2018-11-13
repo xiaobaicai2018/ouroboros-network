@@ -8,12 +8,15 @@ module Cardano.BM.Test.Trace (
     tests
   ) where
 
+import           Prelude hiding (lookup)
+
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
 import           Control.Concurrent (forkIO, threadDelay)
-import           Control.Monad (void)
-import           Data.Text (Text, append)
+import           Control.Monad (forM_, void)
+import           Data.Map (fromListWith, lookup)
+import           Data.Text (Text, append, pack)
 import           Data.Set (fromList)
 
 import           Cardano.BM.Data (LogNamed (..), LogObject (ObserveOpen), ObservableInstance (..),
@@ -33,6 +36,7 @@ tests :: TestTree
 tests = testGroup "testing Trace" [
         testProperty "minimal" prop_Trace_minimal
       , unit_tests
+      , testCase "forked Traces stress testing" stress_trace_in_fork
       , testCaseInfo "demonstrating nested named context logging" example_named
       ]
 
@@ -98,13 +102,13 @@ unit_hierarchy = do
 unit_trace_in_fork :: Assertion
 unit_trace_in_fork = do
     msgs <- STM.newTVarIO []
-    trace <- setupTrace $ TraceConfiguration (TVarListNamed msgs) "test" DropOpening
+    trace <- setupTrace $ TraceConfiguration (TVarListNamed msgs) "test" Neutral
     let trace0 = appendName "work0" trace
     let trace1 = appendName "work1" trace
     void $ forkIO $ work trace0
     threadDelay 500000
     void $ forkIO $ work trace1
-    threadDelay 3500000
+    threadDelay (4*second)
 
     res <- STM.readTVarIO msgs
     let names@(_: namesTail) = map lnName res
@@ -121,7 +125,31 @@ unit_trace_in_fork = do
     logInfoDelay :: Trace IO -> Text -> IO ()
     logInfoDelay trace msg =
         logInfo trace msg >>
-        threadDelay 1000000
+        threadDelay second
+
+stress_trace_in_fork :: Assertion
+stress_trace_in_fork = do
+    msgs <- STM.newTVarIO []
+    trace <- setupTrace $ TraceConfiguration (TVarListNamed msgs) "test" Neutral
+    let names = map (\a -> ("work-" <> pack (show a))) [1..10]
+    forM_ names $ \name -> do
+        let trace' = appendName name trace
+        void $ forkIO $ work trace'
+    threadDelay second
+
+    res <- STM.readTVarIO msgs
+    let resNames = map lnName res
+    let frequencyMap = fromListWith (+) [(x, 1) | x <- resNames]
+
+    -- each trace should have traced 'totalMessages' messages
+    assertBool
+        ("Frequencies of logged messages according to loggername: " ++ show frequencyMap)
+        (all (\name -> (lookup ["test", name] frequencyMap) == Just totalMessages) names)
+  where
+    work :: Trace IO -> IO ()
+    work trace = forM_ [1..totalMessages] $ (logInfo trace) . pack . show
+    totalMessages :: Int
+    totalMessages = 10
 
 unit_noOpening_Trace :: Assertion
 unit_noOpening_Trace = do
@@ -140,4 +168,8 @@ setVar_ = do
     STM.writeTVar t 42
     res <- STM.readTVar t
     return res
+
+second :: Int
+second = 1000000
+
 \end{code}
