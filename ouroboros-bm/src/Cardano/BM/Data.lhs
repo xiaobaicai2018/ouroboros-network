@@ -26,6 +26,7 @@ module Cardano.BM.Data
   , Severity (..)
   , Counter (..)
   , CounterState (..)
+  , diffTimeObserved
   )
   where
 
@@ -201,5 +202,21 @@ data OutputKind = StdOut
                 | TVarListNamed (STM.TVar [LogNamed LogObject])
                 | Null
                 deriving Eq
+
+diffTimeObserved :: CounterState -> CounterState -> Microsecond
+diffTimeObserved (CounterState _ startCounters) (CounterState _ endCounters) =
+    let
+        startTime = getMonotonicTime startCounters
+        endTime   = getMonotonicTime endCounters
+    in
+        endTime - startTime
+  where
+    getMonotonicTime counters = case (filter isMonotonicClockCounter counters) of
+        [(MonotonicClockTime _ micros)] -> micros
+        _                               -> error "Exactly one time measurements was expected!"
+
+isMonotonicClockCounter :: Counter -> Bool
+isMonotonicClockCounter (MonotonicClockTime _ _) = True
+isMonotonicClockCounter _                        = False
 
 \end{code}

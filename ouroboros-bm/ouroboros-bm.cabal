@@ -21,6 +21,7 @@ library
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
                        Cardano.BM.Data
+                       Cardano.BM.Monadic
                        Cardano.BM.STM
                        Cardano.BM.Trace
   other-modules:

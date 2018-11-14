@@ -14,20 +14,27 @@ import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
 import           Control.Concurrent (forkIO, threadDelay)
-import           Control.Monad (forM_, void)
+import           Control.Monad (forM, forM_, void)
+import           Data.List (find)
 import           Data.Map (fromListWith, lookup)
-import           Data.Text (Text, append, pack)
 import           Data.Set (fromList)
+import           Data.Text (Text, append, pack)
 
-import           Cardano.BM.Data (LogNamed (..), LogObject (ObserveOpen), ObservableInstance (..),
-                    OutputKind (..), TraceConfiguration (..), TraceTransformer (..))
-import           Cardano.BM.Controller (insertInController, setupTrace, transformTrace)
-import           Cardano.BM.STM (bracketObserveIO)
+import           Cardano.BM.Controller (insertInController, setupTrace,
+                     transformTrace)
+import           Cardano.BM.Data (CounterState (..), LogItem (..),
+                     LogNamed (..), LogObject (..), LogPrims (..),
+                     ObservableInstance (..), OutputKind (..),
+                     TraceConfiguration (..), TraceTransformer (..),
+                     diffTimeObserved)
+import qualified Cardano.BM.Monadic as Monadic
+import qualified Cardano.BM.STM as BM.STM
 import           Cardano.BM.Trace (Trace, appendName, logInfo)
 
 import           Test.Tasty (TestTree, testGroup)
+import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
+                     testCaseInfo)
 import           Test.Tasty.QuickCheck (testProperty)
-import           Test.Tasty.HUnit (Assertion, assertBool, testCase, testCaseInfo)
 \end{code}
 
 
@@ -36,7 +43,8 @@ tests :: TestTree
 tests = testGroup "testing Trace" [
         testProperty "minimal" prop_Trace_minimal
       , unit_tests
-      , testCase "forked Traces stress testing" stress_trace_in_fork
+      , testCase "forked traces stress testing" stress_trace_in_fork
+      , testCase "stress testing: ObservableTrace vs NoTrace" stress_ObservablevsNo_Trace
       , testCaseInfo "demonstrating nested named context logging" example_named
       ]
 
@@ -45,7 +53,25 @@ unit_tests = testGroup "Unit tests" [
         testCase "opening messages should not be traced" unit_noOpening_Trace
       , testCase "hierarchy testing" unit_hierarchy
       , testCase "forked Traces testing" unit_trace_in_fork
+      , testCase "hierarchy testing NoTrace" $
+            unit_hierarchy' [Neutral, NoTrace, (ObservableTrace observablesSet)] onlyLevelOneMessage
+      , testCase "hierarchy testing DropOpening" $
+            unit_hierarchy' [Neutral, DropOpening, (ObservableTrace observablesSet)] notObserveOpen
+      , testCase "hierarchy testing UntimedTrace" $
+            unit_hierarchy' [Neutral, UntimedTrace, (ObservableTrace observablesSet)] observeOpenWithMeasures
       ]
+      where
+        observablesSet = fromList [MonotonicClock, MemoryStats]
+        notObserveOpen :: [LogObject] -> Bool
+        notObserveOpen = all (\case {ObserveOpen _ -> False; _ -> True})
+        onlyLevelOneMessage :: [LogObject] -> Bool
+        onlyLevelOneMessage = \case
+            [LP (LogMessage (LogItem _ _ "Message from level 1."))] -> True
+            _                                                       -> False
+        observeOpenWithMeasures :: [LogObject] -> Bool
+        observeOpenWithMeasures = any $ \case
+            ObserveOpen (CounterState _ counters) -> not $ null counters
+            _ -> False
 
 \end{code}
 
@@ -55,6 +81,7 @@ prop_Trace_minimal = True
 \end{code}
 
 \begin{code}
+-- | example: named context trace
 example_named :: IO String
 example_named = do
     logTrace <- setupTrace $ TraceConfiguration StdOut "test" Neutral
@@ -72,12 +99,57 @@ example_named = do
         let logTrace' = appendName "inner-work-1" tr
         let observablesSet = fromList [MonotonicClock, MemoryStats]
         insertInController logTrace' "STM-action" (ObservableTrace observablesSet)
-        _ <- bracketObserveIO logTrace' "STM-action" setVar_
+        _ <- BM.STM.bracketObserveIO logTrace' "STM-action" setVar_
         logInfo logTrace' "let's see: done."
 
 \end{code}
 
 \begin{code}
+stress_ObservablevsNo_Trace :: Assertion
+stress_ObservablevsNo_Trace = do
+    msgs  <- STM.newTVarIO []
+    trace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" (ObservableTrace (fromList [MonotonicClock]))
+    msgs'  <- STM.newTVarIO []
+    trace' <- setupTrace $ TraceConfiguration (TVarList msgs') "test" (ObservableTrace observablesSet)
+
+    insertInController trace' "action" (ObservableTrace observablesSet)
+    _ <- Monadic.bracketObserveIO trace "test" $ observeActions trace' "action"
+
+    res <- STM.readTVarIO msgs
+    let endState   = findObserveClose res
+        startState = findObserveOpen  res
+        durationObservable = diffTimeObserved startState endState
+    putStr ("durationObservable: " ++ show durationObservable  ++ " ")
+
+    -- measurements will not occur
+    insertInController trace' "action" NoTrace
+    _ <- Monadic.bracketObserveIO trace "test" $ observeActions trace' "action"
+
+    -- acquire the traced objects
+    res' <- STM.readTVarIO msgs
+    let endState'   = findObserveClose res'
+        startState' = findObserveOpen  res'
+        durationNoTrace = diffTimeObserved startState' endState'
+    putStr ("durationNoTrace: " ++ show durationNoTrace ++ " ")
+
+    -- time consumed by NoTrace must be lower than ObservableTrace
+    assertBool
+        ("NoTrace consumed more time than ObservableTrace: " ++ show res')
+        (durationNoTrace < durationObservable)
+  where
+    observablesSet = fromList [MonotonicClock, MemoryStats]
+    -- measure 100 times the reversion of a list
+    observeActions trace name = do
+        forM [1..100] $ \_ -> Monadic.bracketObserveIO trace name action
+    action = return $
+      reverse [1..1000]
+    findObserveClose objects = case find (\case {(ObserveClose _) -> True; _ -> False}) objects of
+        Just (ObserveClose state) -> state
+        _                         -> error "ObserveClose NOT found."
+    findObserveOpen objects = case find (\case {(ObserveOpen _) -> True; _ -> False}) objects of
+        Just (ObserveOpen state) -> state
+        _                        -> error "ObserveOpen NOT found."
+
 unit_hierarchy :: Assertion
 unit_hierarchy = do
     msgs <- STM.newTVarIO []
@@ -104,6 +176,29 @@ unit_hierarchy = do
 \end{code}
 
 \begin{code}
+unit_hierarchy' :: [TraceTransformer] -> ([LogObject] -> Bool) -> Assertion
+unit_hierarchy' (t1: t2: t3 : _) f = do
+    msgs <- STM.newTVarIO []
+    trace1 <- setupTrace $ TraceConfiguration (TVarList msgs) "test" t1
+    logInfo trace1 "Message from level 1."
+
+    -- subtrace of trace which traces nothing
+    insertInController trace1 "inner" t2
+    (_, trace2) <- transformTrace "inner" trace1
+    logInfo trace2 "Message from level 2."
+
+    insertInController trace2 "innest" t3
+    -- (_, trace3) <- transformTrace "innest" trace2
+    _ <- BM.STM.bracketObserveIO trace2 "innest" setVar_
+    logInfo trace2 "Message from level 3."
+    -- acquire the traced objects
+    res <- STM.readTVarIO msgs
+
+    -- only the first message should have been traced
+    assertBool
+        ("Found more or less messages than expected: " ++ show res)
+        (f res)
+
 unit_trace_in_fork :: Assertion
 unit_trace_in_fork = do
     msgs <- STM.newTVarIO []
@@ -166,7 +261,7 @@ unit_noOpening_Trace :: Assertion
 unit_noOpening_Trace = do
     msgs <- STM.newTVarIO []
     logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening
-    _ <- bracketObserveIO logTrace "test" setVar_
+    _ <- BM.STM.bracketObserveIO logTrace "test" setVar_
     res <- STM.readTVarIO msgs
     -- |ObserveOpen| should be eliminated from tracing.
     assertBool

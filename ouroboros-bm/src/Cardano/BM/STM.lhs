@@ -13,24 +13,20 @@ module Cardano.BM.STM
     , measure_atomically
     ) where
 
-import           Control.Monad (forM_)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
 import           Data.Monoid ((<>))
 import           Data.Text
 import           Data.Time.Units (Microsecond, fromMicroseconds)
-import           Data.Unique (hashUnique, newUnique)
 
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Data (CounterState (..), LogObject (..),
-                     TraceTransformer (..))
+import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
 import           Cardano.BM.Controller (transformTrace)
-import           Cardano.BM.Counters (readCounters)
-import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo,
-                     traceNamedObject)
+import           Cardano.BM.Monadic (observeClose, observeOpen)
+import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
 \end{code}
 %endif
 
@@ -107,36 +103,5 @@ bracketObserveLogIO' traceTransformer logTrace action = do
     (t, as) <- STM.atomically $ stmWithLog action
     observeClose traceTransformer logTrace countersid as
     pure t
-
-\end{code}
-
-\begin{code}
-
-observeOpen :: TraceTransformer -> Trace IO -> IO CounterState
-observeOpen traceTransformer logTrace = do
-    identifier <- newUnique
-    logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
-
-    -- take measurement
-    counters <- readCounters traceTransformer
-    let state = CounterState identifier counters
-    -- send opening message to Trace
-    traceNamedObject logTrace $ ObserveOpen state
-    return state
-
-\end{code}
-
-\begin{code}
-
-observeClose :: TraceTransformer -> Trace IO -> CounterState -> [LogObject] -> IO ()
-observeClose traceTransformer logTrace (CounterState identifier _) logObjects = do
-    logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
-
-    -- take measurement
-    counters <- readCounters traceTransformer
-    -- send closing message to Trace
-    traceNamedObject logTrace $ ObserveClose (CounterState identifier counters)
-    -- trace the messages gathered from inside the action
-    forM_ logObjects $ traceNamedObject logTrace
 
 \end{code}
