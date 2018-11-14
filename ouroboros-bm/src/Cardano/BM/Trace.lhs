@@ -140,13 +140,6 @@ traceNamedItem (_, logTrace) p s m =
                                                            , liPayload   = m
                                                            }
 
-{-
-logMessage, logMessageS, logMessageP :: Trace m -> Severity -> Text -> m ()
-logMessage logTrace  = traceNamedItem logTrace Both
-logMessageS logTrace = traceNamedItem logTrace Private
-logMessageP logTrace = traceNamedItem logTrace Public
--}
-
 logDebug, logInfo, logNotice, logWarning, logError
     :: Trace m -> Text -> m ()
 logDebug logTrace   = traceNamedItem logTrace Both Debug
@@ -183,6 +176,13 @@ logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
 
 %if False
 \begin{spec}
+
+{-
+logMessage, logMessageS, logMessageP :: Trace m -> Severity -> Text -> m ()
+logMessage logTrace  = traceNamedItem logTrace Both
+logMessageS logTrace = traceNamedItem logTrace Private
+logMessageP logTrace = traceNamedItem logTrace Public
+-}
 
 example :: IO ()
 example = do
@@ -233,3 +233,4 @@ traceNamedObject
 traceNamedObject (_, logTrace) = traceWith (named logTrace)
 
 \end{code}
+

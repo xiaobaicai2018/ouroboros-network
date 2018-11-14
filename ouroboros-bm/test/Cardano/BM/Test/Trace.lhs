@@ -55,7 +55,6 @@ prop_Trace_minimal = True
 \end{code}
 
 \begin{code}
--- | example: named context trace
 example_named :: IO String
 example_named = do
     logTrace <- setupTrace $ TraceConfiguration StdOut "test" Neutral
@@ -63,7 +62,7 @@ example_named = do
     logInfo logTrace "entering"
     complexWork0 (appendName "simple-work-0" logTrace) "0"
     complexWork1 (appendName "complex-work-1" logTrace) "42"
-    -- ^ the named context will include "complex" in the logged message
+    -- the named context will include "complex" in the logged message
     logInfo logTrace "done."
     return ""
   where
@@ -76,6 +75,9 @@ example_named = do
         _ <- bracketObserveIO logTrace' "STM-action" setVar_
         logInfo logTrace' "let's see: done."
 
+\end{code}
+
+\begin{code}
 unit_hierarchy :: Assertion
 unit_hierarchy = do
     msgs <- STM.newTVarIO []
@@ -99,6 +101,9 @@ unit_hierarchy = do
         ("Found more or less messages than expected: " ++ show res)
         (length res == 1)
 
+\end{code}
+
+\begin{code}
 unit_trace_in_fork :: Assertion
 unit_trace_in_fork = do
     msgs <- STM.newTVarIO []
@@ -127,6 +132,9 @@ unit_trace_in_fork = do
         logInfo trace msg >>
         threadDelay second
 
+\end{code}
+
+\begin{code}
 stress_trace_in_fork :: Assertion
 stress_trace_in_fork = do
     msgs <- STM.newTVarIO []
@@ -151,6 +159,9 @@ stress_trace_in_fork = do
     totalMessages :: Int
     totalMessages = 10
 
+\end{code}
+
+\begin{code}
 unit_noOpening_Trace :: Assertion
 unit_noOpening_Trace = do
     msgs <- STM.newTVarIO []
@@ -162,6 +173,9 @@ unit_noOpening_Trace = do
         "Found non-expected ObserveOpen message"
         (all (\case {ObserveOpen _ -> False; _ -> True}) res)
 
+\end{code}
+
+\begin{code}
 setVar_ :: STM.STM Integer
 setVar_ = do
     t <- STM.newTVar 0
@@ -173,3 +187,4 @@ second :: Int
 second = 1000000
 
 \end{code}
+

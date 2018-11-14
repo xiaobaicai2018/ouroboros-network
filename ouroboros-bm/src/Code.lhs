@@ -9,6 +9,7 @@
 \usepackage{mathtools}
 \usepackage{colortbl}
 \usepackage{hyperref}
+\usepackage{verbatim}
 
 %include polycode.fmt
 
@@ -77,7 +78,9 @@ import qualified Cardano.BM.Trace
 %include Cardano//BM//Controller.lhs
 
 %include Cardano//BM//Counters.lhs
+
 %include Cardano//BM//Counters//Dummy.lhs
+
 %include Cardano//BM//Counters//Linux.lhs
 
 %include Cardano//BM//Data.lhs

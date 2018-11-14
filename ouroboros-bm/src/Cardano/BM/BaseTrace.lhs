@@ -18,15 +18,15 @@ import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 %endif
 
 \subsubsection{Contravariant}
-
 A covariant is a functor: F A $\to$ F B \\
 A contravariant is a functor: F B $\to$ F A \\
 
 |Op a b| implements the dual to 'arrow' "|getOp :: b -> a|", which when applied
-to a |BaseTracea| of type "|Op (m ()) s|", yields "|s -> m ()|". In our case,
+to a |BaseTrace| of type "|Op (m ()) s|", yields "|s -> m ()|". In our case,
 |Op| accepts an action in a monad |m| with input type |LogNamed LogObject|
 (see 'Trace').
 
+\label{code:BaseTrace}
 \begin{code}
 
 newtype BaseTrace m s = BaseTrace { runTrace :: Op (m ()) s }
@@ -48,11 +48,10 @@ instance Contravariant (BaseTrace m) where
 
 \end{code}
 
-\subsubsection{traceWith}
+\subsubsection{traceWith}\label{code:traceWith}
 Accepts a |Trace| and some payload |s|. First it gets the contravariant
-from the |Trace|
-as type "|Op (m ()) s|" and, after "|getOp :: b -> a|" which translates to
-"|s -> m ()|", calls the action on the |LogNamed LogObject|.
+from the |Trace| as type "|Op (m ()) s|" and, after "|getOp :: b -> a|" which
+translates to "|s -> m ()|", calls the action on the |LogNamed LogObject|.
 
 \begin{code}
 
@@ -61,7 +60,7 @@ traceWith = getOp . runTrace
 
 \end{code}
 
-\subsubsection{natTrace}
+\subsubsection{natTrace}\label{code:natTrace}
 Natural transformation from monad |m| to monad |n|.
 \begin{code}
 
@@ -70,7 +69,7 @@ natTrace nat (BaseTrace (Op tr)) = BaseTrace $ Op $ nat . tr
 
 \end{code}
 
-\subsubsection{noTrace}
+\subsubsection{noTrace}\label{code:noTrace}
 A |Trace| that discards all inputs.
 \begin{code}
 
@@ -78,3 +77,4 @@ noTrace :: Applicative m => BaseTrace m a
 noTrace = BaseTrace $ Op $ const (pure ())
 
 \end{code}
+

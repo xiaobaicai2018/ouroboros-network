@@ -61,6 +61,7 @@ readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
 \end{code}
 
 \begin{code}
+
 pathProc :: FilePath
 pathProc = "/proc/"
 pathProcStat :: ProcessID -> FilePath
@@ -71,20 +72,21 @@ pathProcIO :: ProcessID -> FilePath
 pathProcIO pid = pathProc </> (show pid) </> "io"
 \end{code}
 
-\subsubsection{'/proc/<pid>/statm'}
+\subsubsection{Reading from a file in /proc/\textless pid \textgreater}
 
 \begin{code}
+
 readProcList :: FilePath -> IO [Integer]
 readProcList fp = do
     cs <- readFile fp
     return $ map (\s -> maybe 0 id $ (readMaybe s :: Maybe Integer)) (words cs)
 \end{code}
 
-\subsubsection{readProcStatM - /proc/<pid>/statm}
-\tt{
+\subsubsection{readProcStatM - /proc/\textless pid \textgreater/statm}
+
+\begin{verbatim}
        /proc/[pid]/statm
               Provides information about memory usage, measured in pages.  The columns are:
-
                   size       (1) total program size
                              (same as VmSize in /proc/[pid]/status)
                   resident   (2) resident set size
@@ -95,9 +97,10 @@ readProcList fp = do
                   lib        (5) library (unused since Linux 2.6; always 0)
                   data       (6) data + stack
                   dt         (7) dirty pages (unused since Linux 2.6; always 0)
-}
+\end{verbatim}
 
 \begin{code}
+
 readProcStatM :: IO [Counter]
 readProcStatM = do
     pid <- getProcessID
@@ -109,9 +112,9 @@ readProcStatM = do
     colnames = ["size","resident","shared","text","unused","data","unused"]
 \end{code}
 
-\subsubsection{readProcStats - /proc/<pid>/stat}
+\subsubsection{readProcStats - //proc//\textless pid \textgreater//stat}
 
-\tt{
+\begin{verbatim}
        /proc/[pid]/stat
               Status  information about the process.  This is used by ps(1).  It is defined in the kernel source file
               fs/proc/array.c.
@@ -125,7 +128,7 @@ readProcStatM = do
                         The process ID.
 
               (2) comm  %s
-                        The  filename  of  the  executable,  in parentheses.  This is visible whether or not the exe‐
+                        The  filename  of  the  executable,  in parentheses.  This is visible whether or not the exe-
                         cutable is swapped out.
 
               (3) state  %c
@@ -165,7 +168,7 @@ readProcStatM = do
                         The session ID of the process.
 
               (7) tty_nr  %d
-                        The controlling terminal of the process.  (The minor device number is contained in the combi‐
+                        The controlling terminal of the process.  (The minor device number is contained in the combi-
                         nation of bits 31 to 20 and 7 to 0; the major device number is in bits 15 to 8.)
 
               (8) tpgid  %d
@@ -202,7 +205,7 @@ readProcStatM = do
                         (divide by sysconf(_SC_CLK_TCK)).
 
               (16) cutime  %ld
-                        Amount of time that this process's waited-for children have been scheduled in user mode, mea‐
+                        Amount of time that this process's waited-for children have been scheduled in user mode, mea-
                         sured  in  clock ticks (divide by sysconf(_SC_CLK_TCK)).  (See also times(2).)  This includes
                         guest time, cguest_time (time spent running a virtual CPU, see below).
 
@@ -214,12 +217,12 @@ readProcStatM = do
                         (Explanation  for  Linux  2.6)  For  processes  running a real-time scheduling policy (policy
                         below; see sched_setscheduler(2)), this is the negated scheduling priority, minus  one;  that
                         is,  a  number  in  the range -2 to -100, corresponding to real-time priorities 1 to 99.  For
-                        processes running under a non-real-time scheduling policy, this is the raw nice  value  (set‐
+                        processes running under a non-real-time scheduling policy, this is the raw nice  value  (set-
                         priority(2))  as  represented in the kernel.  The kernel stores nice values as numbers in the
                         range 0 (high) to 39 (low), corresponding to the user-visible nice range of -20 to 19.
 
               (19) nice  %ld
-                        The nice value (see setpriority(2)), a value in the range 19 (low priority) to -20 (high pri‐
+                        The nice value (see setpriority(2)), a value in the range 19 (low priority) to -20 (high pri-
                         ority).
 
               (20) num_threads  %ld
@@ -341,8 +344,7 @@ readProcStatM = do
 
               (52) exit_code  %d  (since Linux 3.5)  [PT]
                         The thread's exit status in the form reported by waitpid(2).
-
-}
+\end{verbatim}
 
 \begin{code}
 readProcStats :: IO [Counter]
@@ -362,8 +364,8 @@ readProcStats = do
                ]
 \end{code}
 
-\subsubsection{readProcIO - /proc/<pid>/io}
-\tt{
+\subsubsection{readProcIO - //proc//\textless pid \textgreater//io}
+\begin{verbatim}
        /proc/[pid]/io (since kernel 2.6.20)
               This file contains I/O statistics for the process, for example:
 
@@ -389,13 +391,13 @@ readProcStats = do
                      caveats apply here as with rchar.
 
               syscr: read syscalls
-                     Attempt to count the number of read I/O operations—that is, system calls  such  as  read(2)  and
+                     Attempt to count the number of read I/O operations-that is, system calls  such  as  read(2)  and
                      pread(2).
 
               syscw: write syscalls
-                     Attempt  to  count the number of write I/O operations—that is, system calls such as write(2) and
+                     Attempt  to  count the number of write I/O operations-that is, system calls such as write(2) and
                      pwrite(2).
-
+\usepackage{verbatim}
               read\_bytes: bytes read
                      Attempt to count the number of bytes which this process really did cause to be fetched from  the
                      storage layer.  This is accurate for block-backed filesystems.
@@ -417,7 +419,7 @@ readProcStats = do
 
               Permission to access this file is governed by a ptrace access mode PTRACE\_MODE\_READ\_FSCREDS check;  see
               ptrace(2).
-}
+\end{verbatim}
 
 \begin{code}
 readProcIO :: IO [Counter]
