@@ -11,7 +11,7 @@ module Cardano.BM.Data
     Trace
   , TraceNamed
   , TraceConfiguration (..)
-  , TraceContext
+  , TraceContext (..)
   , TraceController (..)
   , TraceTransformer (..)
   , TraceTransformerMap
@@ -167,14 +167,24 @@ instance Show CounterState where
 \subsubsection{TraceContext}\label{code:TraceContext}
 \begin{code}
 
-type TraceContext = {-data loggerName and-}MVar TraceController
-type TraceTransformerMap = Map Text TraceTransformer
--- type SeverityMap = Map Text Severity
-data TraceController = TraceController {
-    traceTransformers :: TraceTransformerMap
-    -- minSeverity :: SeverityMap
-    -- ...
+data TraceContext = TraceContext {
+      loggerName :: Text
+    , controller :: MVar TraceController
     }
+
+type TraceTransformerMap = Map Text TraceTransformer
+type SeverityMap         = Map Text Severity
+
+data TraceController = TraceController {
+      traceTransformers :: TraceTransformerMap
+    , severityMap :: SeverityMap
+    , minSeverity :: Severity
+    }
+
+instance Semigroup TraceController
+instance Monoid TraceController where
+    mempty = TraceController mempty mempty Debug
+
 \end{code}
 
 \subsubsection{TraceConfiguration}\label{code:TraceConfiguration}

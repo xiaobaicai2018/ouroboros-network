@@ -106,6 +106,7 @@ stdoutTrace = BaseTrace $ Op $ \lognamed ->
 \end{code}
 
 \subsubsection{Concrete Trace into a |TVar|}\label{code:traceInTVar}\label{code:traceInTVarIO}
+
 \begin{code}
 
 traceInTVar :: STM.TVar [a] -> BaseTrace STM.STM a
@@ -121,6 +122,7 @@ traceNamedInTVarIO tvar = BaseTrace $ Op $ \ln ->
 \end{code}
 
 \subsubsection{Enter message into a trace}\label{code:traceNamedItem}
+
 The function |traceNamedItem| creates a |LogObject| and threads this through
 the action defined in the |Trace|.
 
@@ -144,6 +146,7 @@ logMessage logTrace  = traceNamedItem logTrace Both
 logMessageS logTrace = traceNamedItem logTrace Private
 logMessageP logTrace = traceNamedItem logTrace Public
 -}
+
 logDebug, logInfo, logNotice, logWarning, logError
     :: Trace m -> Text -> m ()
 logDebug logTrace   = traceNamedItem logTrace Both Debug
@@ -151,6 +154,7 @@ logInfo logTrace    = traceNamedItem logTrace Both Info
 logNotice logTrace  = traceNamedItem logTrace Both Notice
 logWarning logTrace = traceNamedItem logTrace Both Warning
 logError logTrace   = traceNamedItem logTrace Both Error
+
 logDebugS, logInfoS, logNoticeS, logWarningS, logErrorS
     :: Trace m -> Text -> m ()
 logDebugS logTrace   = traceNamedItem logTrace Private Debug
@@ -158,6 +162,7 @@ logInfoS logTrace    = traceNamedItem logTrace Private Info
 logNoticeS logTrace  = traceNamedItem logTrace Private Notice
 logWarningS logTrace = traceNamedItem logTrace Private Warning
 logErrorS logTrace   = traceNamedItem logTrace Private Error
+
 logDebugP, logInfoP, logNoticeP, logWarningP, logErrorP
     :: Trace m -> Text -> m ()
 logDebugP logTrace   = traceNamedItem logTrace Public Debug
@@ -173,8 +178,10 @@ logInfoUnsafeP logTrace    = traceNamedItem logTrace PublicUnsafe Info
 logNoticeUnsafeP logTrace  = traceNamedItem logTrace PublicUnsafe Notice
 logWarningUnsafeP logTrace = traceNamedItem logTrace PublicUnsafe Warning
 logErrorUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Error
+
 \end{code}
 
+%if False
 \begin{spec}
 
 example :: IO ()
@@ -183,11 +190,11 @@ example = do
     ctx <- newMVar $ TraceController $ mempty
     let logTrace = appendName "my_example" (ctx, logTrace0)
     insertInOracle logTrace "expect_answer" Neutral
-    result <- bracketObserveIO logTrace "expect_answer" setVar_
+    result <- bracketObserveIO logTrace "expect_answer" setVar\_
     logInfo logTrace $ pack $ show result
 
-example_TVar :: IO ()
-example_TVar = do
+example\_TVar :: IO ()
+example\_TVar = do
     tvar <- STM.newTVarIO []
     let logTrace0 = traceInTVarIO tvar
     ctx <- newMVar $ TraceController $ mempty
@@ -209,12 +216,13 @@ setVar_ = do
 
 exampleConfiguration :: IO Integer
 exampleConfiguration = withTrace (TraceConfiguration StdOut "my_example" (ObservableTrace observablesSet)) $
-    \tr -> bracketObserveIO tr "my_example" setVar_
+    \tr -> bracketObserveIO tr "my_example" setVar\_
   where
     observablesSet :: Set ObservableInstance
     observablesSet = fromList [MonotonicClock, MemoryStats]
 
 \end{spec}
+%endif
 
 \begin{code}
 

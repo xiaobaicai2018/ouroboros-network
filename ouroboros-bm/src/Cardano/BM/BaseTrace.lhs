@@ -24,7 +24,8 @@ A contravariant is a functor: F B $\to$ F A \\
 
 |Op a b| implements the dual to 'arrow' "|getOp :: b -> a|", which when applied
 to a |BaseTracea| of type "|Op (m ()) s|", yields "|s -> m ()|". In our case,
-|Op| accepts an action in a monad |m| with input type |LogNamed LogObject| (see 'Trace').
+|Op| accepts an action in a monad |m| with input type |LogNamed LogObject|
+(see 'Trace').
 
 \begin{code}
 
@@ -34,9 +35,11 @@ newtype BaseTrace m s = BaseTrace { runTrace :: Op (m ()) s }
 
 \subsubsection{contramap}
 A covariant functor defines the function "|fmap :: (a -> b) -> f a -> f b|".
-In case of a contravariant functor, it is the dual function "|contramap :: (a -> b) -> f b -> f a|" which is defined.
+In case of a contravariant functor, it is the dual function
+"|contramap :: (a -> b) -> f b -> f a|" which is defined.
 
-In the following instance, |runTrace| extracts type "|Op (m ()) s|" to which contramap applies |f|,
+In the following instance, |runTrace| extracts type "|Op (m ()) s|" to which
+contramap applies |f|,
 thus "|s -> m ()|". The constructor |BaseTrace| restores "|Op (m ()) (f s)|".
 \begin{code}
 
@@ -46,7 +49,8 @@ instance Contravariant (BaseTrace m) where
 \end{code}
 
 \subsubsection{traceWith}
-Accepts a |Trace| and some payload |s|. First it gets the contravariant from the |Trace|
+Accepts a |Trace| and some payload |s|. First it gets the contravariant
+from the |Trace|
 as type "|Op (m ()) s|" and, after "|getOp :: b -> a|" which translates to
 "|s -> m ()|", calls the action on the |LogNamed LogObject|.
 

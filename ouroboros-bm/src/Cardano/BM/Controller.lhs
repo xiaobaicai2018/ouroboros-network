@@ -23,8 +23,9 @@ import           Data.Text (Text)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data (LogNamed (..), LogObject (..), OutputKind (..),
-                     TraceConfiguration (..), TraceContext, TraceController (..),
-                     TraceTransformer (..), TraceTransformerMap)
+                     TraceConfiguration (..), TraceContext (..),
+                     TraceController (..), TraceTransformer (..),
+                     TraceTransformerMap)
 import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
                      stdoutTrace, traceInTVarIO, traceNamedInTVarIO,
                      traceNamedObject)
@@ -63,11 +64,15 @@ mapName2TTf (ctx, _) name = findTraceTransformer ctx name
 \begin{code}
 
 newContext :: IO TraceContext
-newContext =
-    newMVar $ TraceController $ mempty
+newContext = do
+    ctrl <- newMVar $ (mempty :: TraceController)
+    return $ TraceContext {
+      loggerName = ""
+    , controller = ctrl
+    }
 
 getTraceContext :: TraceContext -> IO (TraceTransformerMap)
-getTraceContext ctx = withMVar ctx $ return . traceTransformers
+getTraceContext ctx = withMVar (controller ctx) $ return . traceTransformers
 
 findTraceTransformer :: TraceContext -> Text -> IO TraceTransformer
 findTraceTransformer ctx name = do
@@ -76,7 +81,9 @@ findTraceTransformer ctx name = do
 
 insertInController :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
 insertInController (ctx, _) name trans = do
-    modifyMVar_ ctx (\(TraceController mapping) -> return $ TraceController $ insert name trans mapping)
+    modifyMVar_ (controller ctx) (\tc -> 
+        return $ tc {
+                     traceTransformers = insert name trans (traceTransformers tc) } )
 
 \end{code}
 

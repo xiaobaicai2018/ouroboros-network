@@ -18,6 +18,8 @@ library
                        Cardano.BM.BaseTrace
                        Cardano.BM.Controller
                        Cardano.BM.Counters
+                       Cardano.BM.Counters.Dummy
+                       Cardano.BM.Counters.Linux
                        Cardano.BM.Data
                        Cardano.BM.STM
                        Cardano.BM.Trace
