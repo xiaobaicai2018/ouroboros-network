@@ -1,11 +1,11 @@
 
-\subsection{Cardano.BM.STM}
+\subsection{Cardano.BM.STMObserver}
 
 %if False
 \begin{code}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.BM.STM
+module Cardano.BM.STMObserver
     (
       bracketObserveIO
     , bracketObserveLogIO
@@ -24,7 +24,7 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
 import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
-import           Cardano.BM.Monadic (observeClose, observeOpen)
+import           Cardano.BM.MonadicObserver (observeClose, observeOpen)
 import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo,
                      transformTrace)
 \end{code}

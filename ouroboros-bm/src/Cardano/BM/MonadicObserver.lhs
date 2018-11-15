@@ -1,11 +1,11 @@
 
-\subsection{Cardano.BM.Monadic}
+\subsection{Cardano.BM.MonadicObserver}
 
 %if False
 \begin{code}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.BM.Monadic
+module Cardano.BM.MonadicObserver
     (
       bracketObserveIO
       -- * observing functions

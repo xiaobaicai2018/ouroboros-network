@@ -10,6 +10,8 @@
 \usepackage{colortbl}
 \usepackage{hyperref}
 \usepackage{verbatim}
+\usepackage{graphicx}
+\usepackage{pstricks}
 
 %include polycode.fmt
 
@@ -45,6 +47,23 @@ abstract ...
 
 introduction ...
 
+\section{Overview}
+
+In figure \ref{fig:overview} we display the relationships among modules
+in |Cardano.BM|. The arrows indicate import of a module. The relationship with 
+a triangle at one end would signify "inheritance", but we use it to show
+that one module replaces the other in the namespace, thus refines its interface.
+
+\begin{figure}[htp]\label{fig:overview}
+\centering{
+  \includegraphics[scale=0.82]{../doc/Relationships.pdf}
+%%  \def\svgwidth{\columnwidth}
+%%  \input{../doc/Relationships.pdf_tex}
+%%  \includegraphics{../doc/Relationships.eps}
+}
+\caption{Overview of relationships}
+\end{figure}
+
 \section{Examples}
 
 examples ...
@@ -61,28 +80,31 @@ import qualified Cardano.BM.BaseTrace
 import qualified Cardano.BM.Controller
 import qualified Cardano.BM.Counters
 import qualified Cardano.BM.Data
-import qualified Cardano.BM.STM
+import qualified Cardano.BM.MonadicObserver
+import qualified Cardano.BM.STMObserver
 import qualified Cardano.BM.Trace
  
 \end{code}
 %endif
 
-%include Cardano//BM//Aggregation.lhs
+%include Cardano/BM/STMObserver.lhs
 
-%include Cardano//BM//STM.lhs
+%include Cardano/BM/MonadicObserver.lhs
 
-%include Cardano//BM//BaseTrace.lhs
+%include Cardano/BM/BaseTrace.lhs
 
-%include Cardano//BM//Trace.lhs
+%include Cardano/BM/Trace.lhs
 
-%include Cardano//BM//Controller.lhs
+%include Cardano/BM/Controller.lhs
 
-%include Cardano//BM//Counters.lhs
+%include Cardano/BM/Counters.lhs
 
-%include Cardano//BM//Counters//Dummy.lhs
+%include Cardano/BM/Counters/Dummy.lhs
 
-%include Cardano//BM//Counters//Linux.lhs
+%include Cardano/BM/Counters/Linux.lhs
 
-%include Cardano//BM//Data.lhs
+%include Cardano/BM/Data.lhs
+
+%include Cardano/BM/Aggregation.lhs
 
 \end{document}

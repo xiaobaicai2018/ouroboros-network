@@ -40,7 +40,7 @@ In case of a contravariant functor, it is the dual function
 
 In the following instance, |runTrace| extracts type "|Op (m ()) s|" to which
 contramap applies |f|,
-thus "|s -> m ()|". The constructor |BaseTrace| restores "|Op (m ()) (f s)|".
+thus "|f s -> m ()|". The constructor |BaseTrace| restores "|Op (m ()) (f s)|".
 \begin{code}
 
 instance Contravariant (BaseTrace m) where
@@ -77,4 +77,3 @@ noTrace :: Applicative m => BaseTrace m a
 noTrace = BaseTrace $ Op $ const (pure ())
 
 \end{code}
-

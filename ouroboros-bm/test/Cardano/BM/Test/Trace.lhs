@@ -27,9 +27,9 @@ import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
                      diffTimeObserved, loggerName)
-import qualified Cardano.BM.Monadic as Monadic
+import qualified Cardano.BM.MonadicObserver as MonadicObserver
 import           Cardano.BM.Setup (setupTrace)
-import qualified Cardano.BM.STM as BM.STM
+import qualified Cardano.BM.STMObserver as STMObserver
 import           Cardano.BM.Trace (Trace, appendName, logInfo, transformTrace)
 
 import           Test.Tasty (TestTree, testGroup)
@@ -103,7 +103,7 @@ example_named = do
         let logTrace' = appendName "inner-work-1" tr
         let observablesSet = fromList [MonotonicClock, MemoryStats]
         insertInController logTrace' "STM-action" (ObservableTrace observablesSet)
-        _ <- BM.STM.bracketObserveIO logTrace' "STM-action" setVar_
+        _ <- STMObserver.bracketObserveIO logTrace' "STM-action" setVar_
         logInfo logTrace' "let's see: done."
 
 \end{code}
@@ -117,7 +117,7 @@ stress_ObservablevsNo_Trace = do
     trace' <- setupTrace $ TraceConfiguration (TVarList msgs') "test" (ObservableTrace observablesSet)
 
     insertInController trace' "action" (ObservableTrace observablesSet)
-    _ <- Monadic.bracketObserveIO trace "test" $ observeActions trace' "action"
+    _ <- MonadicObserver.bracketObserveIO trace "test" $ observeActions trace' "action"
 
     res <- STM.readTVarIO msgs
     let endState   = findObserveClose res
@@ -127,7 +127,7 @@ stress_ObservablevsNo_Trace = do
 
     -- measurements will not occur
     insertInController trace' "action" NoTrace
-    _ <- Monadic.bracketObserveIO trace "test" $ observeActions trace' "action"
+    _ <- MonadicObserver.bracketObserveIO trace "test" $ observeActions trace' "action"
 
     -- acquire the traced objects
     res' <- STM.readTVarIO msgs
@@ -144,7 +144,7 @@ stress_ObservablevsNo_Trace = do
     observablesSet = fromList [MonotonicClock, MemoryStats]
     -- measure 100 times the reversion of a list
     observeActions trace name = do
-        forM [1..100] $ \_ -> Monadic.bracketObserveIO trace name action
+        forM [1..100] $ \_ -> MonadicObserver.bracketObserveIO trace name action
     action = return $
       reverse [1..1000]
     findObserveClose objects = case find (\case {(ObserveClose _) -> True; _ -> False}) objects of
@@ -216,7 +216,7 @@ unit_hierarchy' (t1: t2: t3 : _) f = do
 
     insertInController trace2 "innest" t3
     -- (_, trace3) <- transformTrace "innest" trace2
-    _ <- BM.STM.bracketObserveIO trace2 "innest" setVar_
+    _ <- STMObserver.bracketObserveIO trace2 "innest" setVar_
     logInfo trace2 "Message from level 3."
     -- acquire the traced objects
     res <- STM.readTVarIO msgs
@@ -288,7 +288,7 @@ unit_noOpening_Trace :: Assertion
 unit_noOpening_Trace = do
     msgs <- STM.newTVarIO []
     logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening
-    _ <- BM.STM.bracketObserveIO logTrace "test" setVar_
+    _ <- STMObserver.bracketObserveIO logTrace "test" setVar_
     res <- STM.readTVarIO msgs
     -- |ObserveOpen| should be eliminated from tracing.
     assertBool

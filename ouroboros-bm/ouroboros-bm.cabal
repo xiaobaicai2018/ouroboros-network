@@ -21,9 +21,9 @@ library
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
                        Cardano.BM.Data
-                       Cardano.BM.Monadic
+                       Cardano.BM.MonadicObserver
                        Cardano.BM.Setup
-                       Cardano.BM.STM
+                       Cardano.BM.STMObserver
                        Cardano.BM.Trace
   other-modules:
   default-language:    Haskell2010
