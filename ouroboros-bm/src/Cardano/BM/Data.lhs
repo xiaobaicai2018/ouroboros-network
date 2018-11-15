@@ -15,7 +15,6 @@ module Cardano.BM.Data
   , TraceController (..)
   , TraceTransformer (..)
   , TraceTransformerMap
-  , ContextName
   , OutputKind (..)
   , LogPrims (..)
   , LogObject (..)
@@ -23,6 +22,7 @@ module Cardano.BM.Data
   , LogNamed (..)
   , LogItem (..)
   , LogSelection (..)
+  , LoggerName
   , Severity (..)
   , Counter (..)
   , CounterState (..)
@@ -98,11 +98,10 @@ data ObservableInstance = MonotonicClock
 \subsubsection{LogNamed}\label{code:LogNamed}
 A |LogNamed| contains of a list of context names and some log item.
 \begin{code}
-type ContextName = Text
 
 -- Attach a 'ContextName' to something.
 data LogNamed item = LogNamed
-    { lnName :: [ContextName]
+    { lnName :: LoggerName
     , lnItem :: item
     } deriving (Show)
 
@@ -168,13 +167,15 @@ instance Show CounterState where
 \subsubsection{TraceContext}\label{code:TraceContext}
 \begin{code}
 
+type LoggerName = Text
+
 data TraceContext = TraceContext {
-      loggerName :: Text
+      loggerName :: LoggerName
     , controller :: MVar TraceController
     }
 
-type TraceTransformerMap = Map Text TraceTransformer
-type SeverityMap         = Map Text Severity
+type TraceTransformerMap = Map LoggerName TraceTransformer
+type SeverityMap         = Map LoggerName Severity
 
 data TraceController = TraceController {
       traceTransformers :: TraceTransformerMap
@@ -193,7 +194,7 @@ instance Monoid TraceController where
 
 data TraceConfiguration = TraceConfiguration
   { tcOutputKind       :: OutputKind
-  , tcName             :: Text
+  , tcName             :: LoggerName
   , tcTraceTransformer :: TraceTransformer
   }
 

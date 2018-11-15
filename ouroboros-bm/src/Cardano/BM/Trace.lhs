@@ -31,16 +31,16 @@ module Cardano.BM.Trace
 
     ) where
 
-
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import           Prelude hiding (take)
 
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
-import           Data.Text (Text)
+import           Data.Text (Text, take)
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
 
@@ -52,21 +52,21 @@ import           System.IO.Unsafe (unsafePerformIO)
 %endif
 
 \begin{code}
--- add/modify named context
-modifyName
-    :: ([ContextName] -> [ContextName])
-    -> TraceNamed m
-    -> TraceNamed m
-modifyName k = contramap f
-  where
-    f (LogNamed name item) = LogNamed (k name) item
 
-appendName :: Text -> Trace m -> Trace m
-appendName lname (c,ltr) = (c, modifyName (\e -> [lname] <> e) ltr)
+appendName :: LoggerName -> Trace m -> Trace m
+appendName name (ctx, trace) =
+    let previousLoggerName = loggerName ctx
+        ctx' = ctx { loggerName = appendWithDot previousLoggerName name }
+    in
+        (ctx', trace)
+  where
+    appendWithDot :: LoggerName -> LoggerName -> LoggerName
+    appendWithDot "" newName = take 50 newName
+    appendWithDot xs newName = take 50 $ xs <> "." <> newName
 
 -- return a BaseTrace from a TraceNamed
-named :: BaseTrace m (LogNamed i) -> BaseTrace m i
-named = contramap (LogNamed mempty)
+named :: BaseTrace m (LogNamed i) -> LoggerName -> BaseTrace m i
+named trace name = contramap (LogNamed name) trace
 
 \end{code}
 
@@ -98,10 +98,7 @@ stdoutTrace = BaseTrace $ Op $ \lognamed ->
             withMVar locallock $ \_ ->
                 output (lnName lognamed) $ toStrict (encodeToLazyText obj)
   where
-    output nm msg = TIO.putStrLn $ contextname nm <> " :: " <> msg
-    contextname :: [ContextName] -> Text
-    contextname (y : ys) = foldl (\e a -> e <> "." <> a) y ys
-    contextname []       = "(null name)"
+    output nm msg = TIO.putStrLn $ nm <> " :: " <> msg
 
 \end{code}
 
@@ -134,11 +131,12 @@ traceNamedItem
     -> Severity
     -> Text
     -> m ()
-traceNamedItem (_, logTrace) p s m =
-    traceWith (named logTrace) $ LP $ LogMessage $ LogItem { liSelection = p
-                                                           , liSeverity  = s
-                                                           , liPayload   = m
-                                                           }
+traceNamedItem (ctx, logTrace) p s m =
+    traceWith (named logTrace (loggerName ctx)) $
+        LP $ LogMessage $ LogItem { liSelection = p
+                                  , liSeverity  = s
+                                  , liPayload   = m
+                                  }
 
 logDebug, logInfo, logNotice, logWarning, logError
     :: Trace m -> Text -> m ()
@@ -230,7 +228,7 @@ traceNamedObject
     :: Trace m
     -> LogObject
     -> m ()
-traceNamedObject (_, logTrace) = traceWith (named logTrace)
+traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 
 \end{code}
 

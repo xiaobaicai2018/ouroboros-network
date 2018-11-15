@@ -272,7 +272,7 @@ stress_trace_in_fork = do
     -- each trace should have traced 'totalMessages' messages
     assertBool
         ("Frequencies of logged messages according to loggername: " ++ show frequencyMap)
-        (all (\name -> (lookup ["test", name] frequencyMap) == Just totalMessages) names)
+        (all (\name -> (lookup ("test." <> name) frequencyMap) == Just totalMessages) names)
   where
     work :: Trace IO -> IO ()
     work trace = forM_ [1..totalMessages] $ (logInfo trace) . pack . show

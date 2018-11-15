@@ -89,7 +89,7 @@ insertInController (ctx, _) name trans = do
 changeMinSeverity :: Trace m -> Severity -> IO ()
 changeMinSeverity (ctx, _) newMinSeverity = do
     modifyMVar_ (controller ctx) (\tc ->
-        return $ tc { minSeverity = newMinSeverity } )
+        return $ tc { minSeverity = newMinSeverity })
 
 \end{code}
 
