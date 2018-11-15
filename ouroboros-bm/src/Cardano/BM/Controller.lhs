@@ -12,6 +12,7 @@ module Cardano.BM.Controller
     , transformTrace
     , mapName2TTf
     , insertInController
+    , changeMinSeverity
     ) where
 
 import           Control.Concurrent.MVar (modifyMVar_, newMVar, withMVar)
@@ -22,10 +23,10 @@ import           Data.Map (findWithDefault, insert)
 import           Data.Text (Text)
 
 import           Cardano.BM.BaseTrace
-import           Cardano.BM.Data (LogNamed (..), LogObject (..), OutputKind (..),
-                     TraceConfiguration (..), TraceContext (..),
-                     TraceController (..), TraceTransformer (..),
-                     TraceTransformerMap)
+import           Cardano.BM.Data (LogNamed (..), LogObject (..),
+                     OutputKind (..), Severity (..), TraceConfiguration (..),
+                     TraceContext (..), TraceController (..),
+                     TraceTransformer (..), TraceTransformerMap)
 import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
                      stdoutTrace, traceInTVarIO, traceNamedInTVarIO,
                      traceNamedObject)
@@ -81,9 +82,14 @@ findTraceTransformer ctx name = do
 
 insertInController :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
 insertInController (ctx, _) name trans = do
-    modifyMVar_ (controller ctx) (\tc -> 
+    modifyMVar_ (controller ctx) (\tc ->
         return $ tc {
                      traceTransformers = insert name trans (traceTransformers tc) } )
+
+changeMinSeverity :: Trace m -> Severity -> IO ()
+changeMinSeverity (ctx, _) newMinSeverity = do
+    modifyMVar_ (controller ctx) (\tc ->
+        return $ tc { minSeverity = newMinSeverity } )
 
 \end{code}
 

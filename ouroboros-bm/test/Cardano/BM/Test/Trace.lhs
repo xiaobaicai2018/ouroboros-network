@@ -20,11 +20,11 @@ import           Data.Map (fromListWith, lookup)
 import           Data.Set (fromList)
 import           Data.Text (Text, append, pack)
 
-import           Cardano.BM.Controller (insertInController, setupTrace,
-                     transformTrace)
+import           Cardano.BM.Controller (changeMinSeverity, insertInController,
+                     setupTrace, transformTrace)
 import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
-                     ObservableInstance (..), OutputKind (..),
+                     ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
                      diffTimeObserved)
 import qualified Cardano.BM.Monadic as Monadic
@@ -35,6 +35,7 @@ import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
                      testCaseInfo)
 import           Test.Tasty.QuickCheck (testProperty)
+
 \end{code}
 
 
@@ -59,6 +60,7 @@ unit_tests = testGroup "Unit tests" [
             unit_hierarchy' [Neutral, DropOpening, (ObservableTrace observablesSet)] notObserveOpen
       , testCase "hierarchy testing UntimedTrace" $
             unit_hierarchy' [Neutral, UntimedTrace, (ObservableTrace observablesSet)] observeOpenWithMeasures
+      , testCase "changing severity at runtime" unit_severity
       ]
       where
         observablesSet = fromList [MonotonicClock, MemoryStats]
@@ -172,6 +174,29 @@ unit_hierarchy = do
     assertBool
         ("Found more or less messages than expected: " ++ show res)
         (length res == 1)
+
+\end{code}
+
+\begin{code}
+unit_severity :: Assertion
+unit_severity = do
+    msgs <- STM.newTVarIO []
+    trace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" Neutral
+    logInfo trace "Message #1"
+
+    changeMinSeverity trace Warning
+    logInfo trace "Message #2"
+
+    changeMinSeverity trace Info
+    logInfo trace "Message #3"
+
+    -- acquire the traced objects
+    res <- STM.readTVarIO msgs
+
+    -- only the first message should have been traced
+    assertBool
+        ("Found Info message when Warning was minimum severity: " ++ show res)
+        (all (\case {(LP (LogMessage (LogItem _ Info "Message #2"))) -> False; _ -> True}) res)
 
 \end{code}
 
