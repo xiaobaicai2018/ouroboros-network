@@ -20,16 +20,16 @@ import           Data.Map (fromListWith, lookup)
 import           Data.Set (fromList)
 import           Data.Text (Text, append, pack)
 
-import           Cardano.BM.Controller (changeMinSeverity, insertInController,
-                     setupTrace, transformTrace)
+import           Cardano.BM.Controller (insertInController, setMinSeverity)
 import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
                      diffTimeObserved)
 import qualified Cardano.BM.Monadic as Monadic
+import           Cardano.BM.Setup (setupTrace)
 import qualified Cardano.BM.STM as BM.STM
-import           Cardano.BM.Trace (Trace, appendName, logInfo)
+import           Cardano.BM.Trace (Trace, appendName, logInfo, transformTrace)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
@@ -184,10 +184,10 @@ unit_severity = do
     trace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" Neutral
     logInfo trace "Message #1"
 
-    changeMinSeverity trace Warning
+    setMinSeverity trace Warning
     logInfo trace "Message #2"
 
-    changeMinSeverity trace Info
+    setMinSeverity trace Info
     logInfo trace "Message #3"
 
     -- acquire the traced objects

@@ -14,7 +14,6 @@ module Cardano.BM.Monadic
     ) where
 
 import           Control.Monad (forM_)
--- import           Control.Monad.IO.Class (MonadIO, liftIO)
 
 import           Data.Monoid ((<>))
 import           Data.Text
@@ -23,9 +22,9 @@ import           Data.Unique (hashUnique, newUnique)
 
 import           Cardano.BM.Data (CounterState (..), LogObject (..),
                      TraceTransformer (..))
-import           Cardano.BM.Controller (transformTrace)
 import           Cardano.BM.Counters (readCounters)
-import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject)
+import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject,
+                     transformTrace)
 \end{code}
 %endif
 

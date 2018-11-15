@@ -24,9 +24,9 @@ import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
 import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
-import           Cardano.BM.Controller (transformTrace)
 import           Cardano.BM.Monadic (observeClose, observeOpen)
-import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo)
+import           Cardano.BM.Trace (Trace, appendName, logDebug, logInfo,
+                     transformTrace)
 \end{code}
 %endif
 

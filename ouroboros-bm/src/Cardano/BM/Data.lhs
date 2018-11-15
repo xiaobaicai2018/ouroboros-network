@@ -183,10 +183,6 @@ data TraceController = TraceController {
     , minSeverity :: Severity
     }
 
-instance Semigroup TraceController
-instance Monoid TraceController where
-    mempty = TraceController mempty mempty Debug
-
 \end{code}
 
 \subsubsection{TraceConfiguration}\label{code:TraceConfiguration}

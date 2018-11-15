@@ -3,9 +3,9 @@
 
 %if False
 \begin{code}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
+{- # LANGUAGE DeriveAnyClass    # -}
+{- # LANGUAGE DeriveGeneric     # -}
+{- # LANGUAGE LambdaCase        # -}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
@@ -21,6 +21,7 @@ module Cardano.BM.Trace
     , appendName
     -- * utils
     , natTrace
+    , transformTrace
     -- * log functions
     , traceNamedObject
     , logDebug,   logDebugS,   logDebugP,   logDebugUnsafeP
@@ -33,10 +34,12 @@ module Cardano.BM.Trace
 
 import           Prelude hiding (take)
 
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import qualified Control.Concurrent.STM.TVar as STM
+import           Control.Monad (when)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
@@ -46,6 +49,7 @@ import           Data.Text.Lazy (toStrict)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data
+import           Cardano.BM.Controller (checkSeverity, findTraceTransformer)
 
 import           System.IO.Unsafe (unsafePerformIO)
 \end{code}
@@ -118,6 +122,18 @@ traceNamedInTVarIO tvar = BaseTrace $ Op $ \ln ->
                          STM.atomically $ STM.modifyTVar tvar ((:) ln)
 \end{code}
 
+\begin{code}
+traceConditionally
+    :: (MonadIO m)
+    => TraceContext -> BaseTrace m LogObject -> LogObject
+    -> m ()
+traceConditionally ctx logTrace msg@(LP (LogMessage item)) = do
+    flag <- liftIO $ checkSeverity ctx item
+    when flag $ traceWith logTrace msg
+traceConditionally _ logTrace logObject = traceWith logTrace logObject
+
+\end{code}
+
 \subsubsection{Enter message into a trace}\label{code:traceNamedItem}
 
 The function |traceNamedItem| creates a |LogObject| and threads this through
@@ -126,20 +142,21 @@ the action defined in the |Trace|.
 \begin{code}
 
 traceNamedItem
-    :: Trace m
+    :: (MonadIO m)
+    => Trace m
     -> LogSelection
     -> Severity
     -> Text
     -> m ()
 traceNamedItem (ctx, logTrace) p s m =
-    traceWith (named logTrace (loggerName ctx)) $
+    traceConditionally ctx (named logTrace (loggerName ctx)) $
         LP $ LogMessage $ LogItem { liSelection = p
                                   , liSeverity  = s
                                   , liPayload   = m
                                   }
 
 logDebug, logInfo, logNotice, logWarning, logError
-    :: Trace m -> Text -> m ()
+    :: (MonadIO m) => Trace m -> Text -> m ()
 logDebug logTrace   = traceNamedItem logTrace Both Debug
 logInfo logTrace    = traceNamedItem logTrace Both Info
 logNotice logTrace  = traceNamedItem logTrace Both Notice
@@ -147,7 +164,7 @@ logWarning logTrace = traceNamedItem logTrace Both Warning
 logError logTrace   = traceNamedItem logTrace Both Error
 
 logDebugS, logInfoS, logNoticeS, logWarningS, logErrorS
-    :: Trace m -> Text -> m ()
+    :: (MonadIO m) => Trace m -> Text -> m ()
 logDebugS logTrace   = traceNamedItem logTrace Private Debug
 logInfoS logTrace    = traceNamedItem logTrace Private Info
 logNoticeS logTrace  = traceNamedItem logTrace Private Notice
@@ -155,7 +172,7 @@ logWarningS logTrace = traceNamedItem logTrace Private Warning
 logErrorS logTrace   = traceNamedItem logTrace Private Error
 
 logDebugP, logInfoP, logNoticeP, logWarningP, logErrorP
-    :: Trace m -> Text -> m ()
+    :: (MonadIO m) => Trace m -> Text -> m ()
 logDebugP logTrace   = traceNamedItem logTrace Public Debug
 logInfoP logTrace    = traceNamedItem logTrace Public Info
 logNoticeP logTrace  = traceNamedItem logTrace Public Notice
@@ -163,7 +180,7 @@ logWarningP logTrace = traceNamedItem logTrace Public Warning
 logErrorP logTrace   = traceNamedItem logTrace Public Error
 
 logDebugUnsafeP, logInfoUnsafeP, logNoticeUnsafeP, logWarningUnsafeP, logErrorUnsafeP
-    :: Trace m -> Text -> m ()
+    :: (MonadIO m) => Trace m -> Text -> m ()
 logDebugUnsafeP logTrace   = traceNamedItem logTrace PublicUnsafe Debug
 logInfoUnsafeP logTrace    = traceNamedItem logTrace PublicUnsafe Info
 logNoticeUnsafeP logTrace  = traceNamedItem logTrace PublicUnsafe Notice
@@ -232,3 +249,20 @@ traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 
 \end{code}
 
+\subsubsection{transformTrace}\label{code:transformTrace}
+\begin{code}
+
+transformTrace :: Text -> Trace IO -> IO (TraceTransformer, Trace IO)
+transformTrace name tr@(ctx, _) = do
+    traceTransformer <- findTraceTransformer tr name
+    return $ case traceTransformer of
+        Neutral      -> (traceTransformer, appendName name tr)
+        UntimedTrace -> (traceTransformer, appendName name tr)
+        NoTrace      -> (traceTransformer, (ctx, BaseTrace $ Op $ \_ -> pure ()))
+        DropOpening  -> (traceTransformer, (ctx, BaseTrace $ Op $ \lognamed ->
+            case lnItem lognamed of
+                ObserveOpen _ -> return ()
+                obj           -> traceNamedObject tr obj))
+        ObservableTrace _ -> (traceTransformer, appendName name tr)
+
+\end{code}
