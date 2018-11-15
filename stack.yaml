@@ -1,0 +1,12 @@
+resolver: nightly-2018-11-15
+
+extra-deps:
+- array-0.5.2.0
+- QuickCheck-2.12.6.1
+- process-1.6.4.0
+- time-units-1.0.0
+
+packages:
+- ouroboros-bm
+- .
+# - typed-transitions
