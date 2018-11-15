@@ -19,13 +19,14 @@ import           Data.List (find)
 import           Data.Map (fromListWith, lookup)
 import           Data.Set (fromList)
 import           Data.Text (Text, append, pack)
+import qualified Data.Text as T
 
 import           Cardano.BM.Controller (insertInController, setMinSeverity)
 import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
-                     diffTimeObserved)
+                     diffTimeObserved, loggerName)
 import qualified Cardano.BM.Monadic as Monadic
 import           Cardano.BM.Setup (setupTrace)
 import qualified Cardano.BM.STM as BM.STM
@@ -61,6 +62,7 @@ unit_tests = testGroup "Unit tests" [
       , testCase "hierarchy testing UntimedTrace" $
             unit_hierarchy' [Neutral, UntimedTrace, (ObservableTrace observablesSet)] observeOpenWithMeasures
       , testCase "changing severity at runtime" unit_severity
+      , testCase "appending names should not exceed 50 chars" uint_append_name
       ]
       where
         observablesSet = fromList [MonotonicClock, MemoryStats]
@@ -290,9 +292,24 @@ unit_noOpening_Trace = do
     res <- STM.readTVarIO msgs
     -- |ObserveOpen| should be eliminated from tracing.
     assertBool
-        "Found non-expected ObserveOpen message"
+        "Found non-expected ObserveOpen message."
         (all (\case {ObserveOpen _ -> False; _ -> True}) res)
 
+\end{code}
+
+\begin{code}
+
+uint_append_name :: Assertion
+uint_append_name = do
+    trace0 <- setupTrace $ TraceConfiguration StdOut "test" Neutral
+    let trace1 = appendName bigName trace0
+    let (ctx2, _) = appendName bigName trace1
+
+    assertBool
+        ("Found logger name with more than 50 chars: " ++ show (loggerName ctx2))
+        (T.length (loggerName ctx2) <= 50)
+  where
+    bigName = T.replicate 50 "abcdefghijklmnopqrstuvwxyz"
 \end{code}
 
 \begin{code}
