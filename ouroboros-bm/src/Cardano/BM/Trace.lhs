@@ -149,11 +149,12 @@ traceNamedItem
     -> Text
     -> m ()
 traceNamedItem (ctx, logTrace) p s m =
-    traceConditionally ctx (named logTrace (loggerName ctx)) $
-        LP $ LogMessage $ LogItem { liSelection = p
-                                  , liSeverity  = s
-                                  , liPayload   = m
-                                  }
+    let logmsg = LP $ LogMessage $ LogItem { liSelection = p
+                                           , liSeverity  = s
+                                           , liPayload   = m
+                                           }
+    in
+    traceConditionally ctx (named logTrace (loggerName ctx)) $ logmsg
 
 logDebug, logInfo, logNotice, logWarning, logError
     :: (MonadIO m) => Trace m -> Text -> m ()

@@ -11,6 +11,8 @@ classinstance 128661 class_ref 129941 // TraceContext
  name ""  xyz 628 229 2000
 note 129813 "entering a log item : LogItem, the  Trace will check the minimumSeverity in the TraceContext, and the named severity filter, if available."
   xyzwh 80 113 2000 325 89
+classinstance 129941 class_ref 130197 // LoggerName
+ name ""  xyz 484 369 2000
 linkcanvas 128405
   from ref 128277 z 2001 to ref 128149
 dirscanvas 129045 z 1000 linkcanvas_ref 128405
@@ -27,6 +29,11 @@ dirscanvas 129429 z 1000 linkcanvas_ref 128789
   
   forward_label "2.1 minimumSeverity()
 2.2 namedSeverityFilter()" xyz 460 194 3000
+linkcanvas 130069
+  from ref 128149 z 2001 to ref 129941
+dirscanvas 130197 z 1000 linkcanvas_ref 130069
+  
+  forward_label "3 view()" xyz 258 375 3000
 msgs
   msg operation_ref 129301 // "logInfo()"
     forward ranks 1 "1" dirscanvas_ref 129045
@@ -41,5 +48,8 @@ msgs
 	forward ranks 4 "2.2" dirscanvas_ref 129429
 	no_msg
     msgsend
+  msg operation_ref 136853 // "view()"
+    forward ranks 5 "3" dirscanvas_ref 130197
+    no_msg
 msgsend
 end

@@ -33,7 +33,7 @@ msgs
   msg operation_ref 128277 // "addSeverityFilter()"
     forward ranks 1 "1" dirscanvas_ref 129045
     msgs
-      msg operation_ref 128405 // "addSeverityFilter(in name : LoggerName, in sev : Severity) : void"
+      msg operation_ref 128405 // "addSeverityFilter()"
 	forward ranks 2 "1.1" dirscanvas_ref 128917
 	msgs
 	  msg operation_ref 128149 // "storeSeverityFilter()"
@@ -44,7 +44,7 @@ msgs
   msg operation_ref 128533 // "removeSeverityFilter()"
     forward ranks 4 "2" dirscanvas_ref 129045
     msgs
-      msg operation_ref 128661 // "removeSeverityFilter(in name : LoggerName) : void"
+      msg operation_ref 128661 // "removeSeverityFilter()"
 	forward ranks 5 "2.1" dirscanvas_ref 128917
 	msgs
 	  msg operation_ref 128021 // "removeSeverityFilter()"
