@@ -1,5 +1,0 @@
-
-I use 'StarUML` to draw diagrams. The exported files in SVG format show in the background "UNREGISTERED".
-It's easy to replace this text with an empty one. The SVG is then loaded into 'Inkscape' and exported
-as a PDF.
-

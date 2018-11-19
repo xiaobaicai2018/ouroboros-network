@@ -1,0 +1,14 @@
+window_sizes 1350 855 337 1007 739 64
+cleanlooks_style
+diagrams
+  active  classdiagram_ref 128021 // Overview_Classes
+    805 591 100 A4 105 0
+end
+show_stereotypes
+selected classdiagram_ref 128021 // Overview_Classes
+open
+  classview_ref 128021 // Overview
+  classview_ref 128149 // Configuration
+  classview_ref 128277 // Counters
+end
+end
