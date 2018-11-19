@@ -13,21 +13,21 @@ module Cardano.BM.Setup
 
 import           Control.Concurrent.MVar (newMVar)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
+import Data.Map (singleton)
 
-import           Cardano.BM.Controller (insertInController)
-import           Cardano.BM.Data (OutputKind (..), Severity (..),
+import           Cardano.BM.Data (LoggerName, OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceContext (..),
-                     TraceController (..))
-import           Cardano.BM.Trace (Trace, appendName, natTrace, noTrace,
-                     stdoutTrace, traceInTVarIO, traceNamedInTVarIO)
+                     TraceController (..), TraceTransformer)
+import           Cardano.BM.Trace (Trace, natTrace, noTrace,
+                     stdoutTrace, traceInTVarIO, traceNamedInTVarIO, transformTrace)
 \end{code}
 %endif
 
 \begin{code}
 
 setupTrace :: MonadIO m => TraceConfiguration -> m (Trace m)
-setupTrace (TraceConfiguration outputKind name traceTransformer) = do
-    ctx <- liftIO $ newContext
+setupTrace (TraceConfiguration outputKind name traceTransformer sev) = do
+    ctx <- liftIO $ newContext name traceTransformer sev
     let logTrace0 = case outputKind of
             StdOut             -> natTrace liftIO stdoutTrace
             TVarList      tvar -> natTrace liftIO $ traceInTVarIO tvar
@@ -35,8 +35,8 @@ setupTrace (TraceConfiguration outputKind name traceTransformer) = do
             Null               -> noTrace
 
     let logTrace = (ctx, logTrace0)
-    liftIO $ insertInController logTrace name traceTransformer
-    return $ appendName name logTrace
+    (_, logTrace') <- transformTrace "" logTrace
+    return logTrace'
 
 withTrace :: MonadIO m =>  TraceConfiguration -> (Trace m -> m t) -> m t
 withTrace cfg action = do
@@ -47,12 +47,16 @@ withTrace cfg action = do
 \subsubsection{TraceContext}\label{code:TraceContext}
 \begin{code}
 
-newContext :: IO TraceContext
-newContext = do
-    ctrl <- newMVar $ TraceController mempty mempty Debug
+newContext :: LoggerName -> TraceTransformer -> Severity -> IO TraceContext
+newContext name traceTransformer sev = do
+    ctrl <- newMVar $ TraceController {
+                          traceTransformers = singleton name traceTransformer
+                        , severityMap = singleton name sev
+                        , minSeverity = sev
+                        }
     return $ TraceContext {
-      loggerName = ""
-    , controller = ctrl
-    }
+        loggerName = name
+      , controller = ctrl
+      }
 
 \end{code}

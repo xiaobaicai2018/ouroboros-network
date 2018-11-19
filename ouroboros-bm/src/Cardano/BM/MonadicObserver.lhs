@@ -30,6 +30,9 @@ import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject,
 
 \begin{code}
 
+-- | Observes an action and adds name given in the logger
+--   name of the given |Trace|. If the empty |Text| is
+--   given as name then the logger name remains untouched.
 bracketObserveIO :: Trace IO -> Text -> IO t -> IO t
 bracketObserveIO logTrace0 name action = do
     (traceTransformer, logTrace) <- transformTrace name logTrace0

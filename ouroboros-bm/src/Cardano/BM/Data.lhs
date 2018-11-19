@@ -192,6 +192,7 @@ data TraceConfiguration = TraceConfiguration
   { tcOutputKind       :: OutputKind
   , tcName             :: LoggerName
   , tcTraceTransformer :: TraceTransformer
+  , tcSeverity         :: Severity
   }
 
 data OutputKind = StdOut

@@ -45,7 +45,7 @@ nominalDiffTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
 \begin{code}
 measure_atomically :: (MonadIO m) => Trace m -> Text -> STM.STM a -> m a
 measure_atomically logTrace0 name stm = do
-    let logTrace = appendName name logTrace0
+    logTrace <- appendName name logTrace0
     logDebug logTrace $ "entering " <> name
     tstart <- liftIO getMonotonicTimeNSec
     res <- liftIO $ STM.atomically stm

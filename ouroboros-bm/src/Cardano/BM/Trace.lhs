@@ -32,8 +32,6 @@ module Cardano.BM.Trace
 
     ) where
 
-import           Prelude hiding (take)
-
 import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad (when)
@@ -43,13 +41,13 @@ import qualified Control.Monad.STM as STM
 import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
-import           Data.Text (Text, take)
+import           Data.Text (Text)
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data
-import           Cardano.BM.Controller (checkSeverity, findTraceTransformer)
+import           Cardano.BM.Controller (appendWithDot, checkSeverity, findTraceTransformer, getNamedSeverity, setNamedSeverity)
 
 import           System.IO.Unsafe (unsafePerformIO)
 \end{code}
@@ -57,16 +55,17 @@ import           System.IO.Unsafe (unsafePerformIO)
 
 \begin{code}
 
-appendName :: LoggerName -> Trace m -> Trace m
-appendName name (ctx, trace) =
+appendName :: MonadIO m => LoggerName -> Trace m -> m (Trace m)
+appendName name (ctx, trace) = do
+    -- append the name to the existing one
     let previousLoggerName = loggerName ctx
-        ctx' = ctx { loggerName = appendWithDot previousLoggerName name }
-    in
-        (ctx', trace)
-  where
-    appendWithDot :: LoggerName -> LoggerName -> LoggerName
-    appendWithDot "" newName = take 50 newName
-    appendWithDot xs newName = take 50 $ xs <> "." <> newName
+        newLoggerName      = appendWithDot previousLoggerName name
+        ctx' = ctx { loggerName = newLoggerName }
+    -- inherit the |Severity| of the given |Trace|.
+    previousSeverity <- liftIO $ getNamedSeverity ctx' previousLoggerName
+    liftIO $ setNamedSeverity ctx newLoggerName previousSeverity
+
+    return (ctx', trace)
 
 -- return a BaseTrace from a TraceNamed
 named :: BaseTrace m (LogNamed i) -> LoggerName -> BaseTrace m i
@@ -204,7 +203,7 @@ example :: IO ()
 example = do
     let logTrace0 = stdoutTrace
     ctx <- newMVar $ TraceController $ mempty
-    let logTrace = appendName "my_example" (ctx, logTrace0)
+    logTrace <- appendName "my_example" (ctx, logTrace0)
     insertInOracle logTrace "expect_answer" Neutral
     result <- bracketObserveIO logTrace "expect_answer" setVar\_
     logInfo logTrace $ pack $ show result
@@ -214,7 +213,7 @@ example\_TVar = do
     tvar <- STM.newTVarIO []
     let logTrace0 = traceInTVarIO tvar
     ctx <- newMVar $ TraceController $ mempty
-    let logTrace = appendName "my_example" $ (ctx, logTrace0)
+    logTrace <- appendName "my_example" $ (ctx, logTrace0)
     result <- bracketObserveIO logTrace "expect_answer" setVar_
     logInfo logTrace $ pack $ show result
     items <- STM.readTVarIO tvar
@@ -231,7 +230,7 @@ setVar_ = do
     return res
 
 exampleConfiguration :: IO Integer
-exampleConfiguration = withTrace (TraceConfiguration StdOut "my_example" (ObservableTrace observablesSet)) $
+exampleConfiguration = withTrace (TraceConfiguration StdOut "my_example" (ObservableTrace observablesSet) Debug) $
     \tr -> bracketObserveIO tr "my_example" setVar\_
   where
     observablesSet :: Set ObservableInstance
@@ -253,17 +252,28 @@ traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 \subsubsection{transformTrace}\label{code:transformTrace}
 \begin{code}
 
-transformTrace :: Text -> Trace IO -> IO (TraceTransformer, Trace IO)
+-- | Transforms the |Trace| given according to content of
+--   |TraceTransformerMap| using the logger name of the
+--   current |Trace| appended with the given name. If the
+--   empty |Text| is given as name then the logger name
+--   remains untouched.
+transformTrace :: MonadIO m => Text -> Trace m -> m (TraceTransformer, Trace m)
 transformTrace name tr@(ctx, _) = do
-    traceTransformer <- findTraceTransformer tr name
-    return $ case traceTransformer of
-        Neutral      -> (traceTransformer, appendName name tr)
-        UntimedTrace -> (traceTransformer, appendName name tr)
-        NoTrace      -> (traceTransformer, (ctx, BaseTrace $ Op $ \_ -> pure ()))
-        DropOpening  -> (traceTransformer, (ctx, BaseTrace $ Op $ \lognamed ->
+    traceTransformer <- liftIO $ findTraceTransformer tr $ appendWithDot (loggerName ctx) name
+    case traceTransformer of
+        Neutral      -> do
+                            tr' <- appendName name tr
+                            return $ (traceTransformer, tr')
+        UntimedTrace -> do
+                            tr' <- appendName name tr
+                            return $ (traceTransformer, tr')
+        NoTrace      -> return (traceTransformer, (ctx, BaseTrace $ Op $ \_ -> pure ()))
+        DropOpening  -> return (traceTransformer, (ctx, BaseTrace $ Op $ \lognamed ->
             case lnItem lognamed of
                 ObserveOpen _ -> return ()
                 obj           -> traceNamedObject tr obj))
-        ObservableTrace _ -> (traceTransformer, appendName name tr)
+        ObservableTrace _ -> do
+                            tr' <- appendName name tr
+                            return $ (traceTransformer, tr')
 
 \end{code}
