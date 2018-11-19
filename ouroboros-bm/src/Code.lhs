@@ -13,7 +13,9 @@
 \usepackage{graphicx}
 \usepackage{pstricks}
 
-%include polycode.fmt
+%include colorcode.fmt
+
+%include local.fmt
 
 \title{Cardano.BM - benchmarking and logging}
 \author{Alexander Diemand
@@ -61,7 +63,7 @@ that one module replaces the other in the namespace, thus refines its interface.
 %%  \input{../doc/Relationships.pdf_tex}
 %%  \includegraphics{../doc/Relationships.eps}
 }
-\caption{Overview of relationships}
+\caption{Overview of module relationships}
 \end{figure}
 
 \section{Examples}

@@ -1,14 +1,25 @@
-window_sizes 1350 855 337 1007 739 64
+window_sizes 1843 1139 337 1500 1023 64
 cleanlooks_style
 diagrams
-  active  classdiagram_ref 128021 // Overview_Classes
-    805 591 100 A4 105 0
+  classdiagram_ref 128021 // Overview_Classes
+    942 661 100 A4 0 0
+  active  componentdiagram_ref 135445 // NodeShell
+    836 652 100 A4 0 0
+  sequencediagram_ref 135573 // Node-Shell Functionality
+    652 668 100 A4 0 0
 end
 show_stereotypes
-selected classdiagram_ref 128021 // Overview_Classes
+selected class_ref 137493 // CardanoFeature
 open
-  classview_ref 128021 // Overview
+  class_ref 128021 // Trace
+  class_ref 129173 // EKGView
+  class_ref 129301 // Counters
+  class_ref 130197 // LoggerName
   classview_ref 128149 // Configuration
   classview_ref 128277 // Counters
+  classview_ref 134805 // EKG
+  classview_ref 134933 // TeeTrace
+  componentview_ref 128021 // Node-Shell
+  class_ref 137493 // CardanoFeature
 end
 end
