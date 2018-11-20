@@ -58,7 +58,7 @@ that one module replaces the other in the namespace, thus refines its interface.
 
 \begin{figure}[htp]\label{fig:overview}
 \centering{
-  \includegraphics[scale=0.62]{../doc/Relationships.pdf}
+  \includegraphics[scale=0.54]{../doc/Relationships.pdf}
 %%  \def\svgwidth{\columnwidth}
 %%  \input{../doc/Relationships.pdf_tex}
 %%  \includegraphics{../doc/Relationships.eps}

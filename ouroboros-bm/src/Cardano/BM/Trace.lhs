@@ -254,7 +254,7 @@ traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 \subsubsection{transformTrace}\label{code:transformTrace}
 \begin{code}
 
--- | Transforms the |Trace| given according to content of
+--   Transforms the |Trace| given according to content of
 --   |TraceTransformerMap| using the logger name of the
 --   current |Trace| appended with the given name. If the
 --   empty |Text| is given as name then the logger name
