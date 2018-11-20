@@ -59,11 +59,9 @@ setNamedSeverity ctx name newSeverity =
     modifyMVar_ (controller ctx) $ \tc ->
         return $ tc { severityMap = insert name newSeverity (severityMap tc) }
 
-getNamedSeverity :: TraceContext -> LoggerName -> IO Severity
+getNamedSeverity :: TraceContext -> LoggerName -> IO (Maybe Severity)
 getNamedSeverity ctx name = withMVar (controller ctx) $ \tc ->
-    return $ case lookup name (severityMap tc) of
-                Nothing -> error $ "Uninitialized Severity for logger name: " ++ show name
-                Just s  -> s
+    return $ lookup name (severityMap tc)
 \end{code}
 
 \subsubsection{checkSeverity}\label{code:checkSeverity}
@@ -74,8 +72,7 @@ checkSeverity ctx item = do
         itemSev = liSeverity item
     withMVar (controller ctx) $ \tc -> do
         let globalSev = minSeverity tc
-            specificSev = case lookup name (severityMap tc) of
-                Nothing -> error $ "Uninitialized Severity for logger name: " ++ show name
-                Just s  -> s
-        return ((itemSev >= globalSev) && (itemSev >= specificSev))
+        case lookup name (severityMap tc) of
+            Nothing          -> return (itemSev >= globalSev)
+            Just specificSev -> return ((itemSev >= globalSev) && (itemSev >= specificSev))
 \end{code}

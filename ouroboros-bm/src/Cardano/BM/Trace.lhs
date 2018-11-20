@@ -62,10 +62,11 @@ appendName name (ctx, trace) = do
         newLoggerName      = appendWithDot previousLoggerName name
         ctx' = ctx { loggerName = newLoggerName }
     -- inherit the |Severity| of the given |Trace|.
-    previousSeverity <- liftIO $ getNamedSeverity ctx' previousLoggerName
-    liftIO $ setNamedSeverity ctx newLoggerName previousSeverity
-
-    return (ctx', trace)
+    mPreviousSeverity <- liftIO $ getNamedSeverity ctx' previousLoggerName
+    case mPreviousSeverity of
+        Nothing  -> return (ctx', trace)
+        Just sev -> liftIO $ setNamedSeverity ctx newLoggerName sev
+                 >> return (ctx', trace)
 
 -- return a BaseTrace from a TraceNamed
 named :: BaseTrace m (LogNamed i) -> LoggerName -> BaseTrace m i

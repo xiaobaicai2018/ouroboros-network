@@ -65,6 +65,7 @@ executable example
                        random,
                        time,
                        unix
+
 executable gui-example
   hs-source-dirs:      demo-gui
   main-is:             GUIexample.hs
