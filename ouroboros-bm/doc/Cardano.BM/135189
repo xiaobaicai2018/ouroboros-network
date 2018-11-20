@@ -1,6 +1,6 @@
 format 221
 "Data" // Cardano.BM::Data
-  revision 2
+  revision 3
   modified_by 21 "axeld"
   // class settings
   
@@ -50,6 +50,95 @@ format 221
     
     activitydiagramsettings
      end
+    class 129045 "ConfigurationView"
+      visibility package stereotype "View"
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 130325 // <unidirectional association>
+	relation 130325 --->
+	  a role_name "" private
+	    cpp default "    ${comment}${static}${thread_local}${mutable}${volatile}${const}${type} * ${name}${value};
+"
+	    classrelation_ref 130325 // <unidirectional association>
+	  b parent class_ref 128405 // Controller
+      end
+
+      operation 128277 "addSeverityFilter"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}{
+  ${body}}
+"
+	
+	
+	
+	
+      end
+
+      operation 128533 "removeSeverityFilter"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}{
+  ${body}}
+"
+	
+	
+	
+	
+      end
+
+      classrelation 137237 // <unidirectional association>
+	relation 137237 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 137237 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+
+      operation 144533 "addOutputSelection"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      classrelation 160149 // <unidirectional association>
+	relation 159509 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 160149 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+
+      classrelation 166933 // <unidirectional association>
+	relation 166165 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 166933 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+    end
+
     class 130069 "Severity"
       visibility public stereotype "Enum"
       cpp_decl "${comment}${template}class ${name}${inherit} {

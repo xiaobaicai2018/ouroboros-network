@@ -30,7 +30,7 @@ classcanvas 128917 class_ref 128917 // Aggregator
 end
 classcanvas 129045 class_ref 129045 // ConfigurationView
   classdiagramsettings member_max_width 0 end
-  xyz 539.26 673.664 2000
+  xyz 261.26 279.664 2000
 end
 classcanvas 129173 class_ref 129173 // EKGView
   classdiagramsettings member_max_width 0 end
@@ -58,23 +58,23 @@ classcanvas 131861 class_ref 129941 // TraceContext
 end
 classcanvas 132501 class_ref 130069 // Severity
   classdiagramsettings member_max_width 0 end
-  xyz 68.6827 72.6547 2000
+  xyz 69.6827 72.6547 2000
 end
 classcanvas 132629 class_ref 130197 // LoggerName
   classdiagramsettings member_max_width 0 end
-  xyz 60.2212 177.434 2000
+  xyz 61.2212 177.434 2000
 end
 classcanvas 133013 class_ref 136981 // Configuration
   classdiagramsettings hide_attributes no member_max_width 0 end
-  xyzwh 205.336 95.4927 2000 130 83
+  xyzwh 206.336 95.4927 2000 130 83
 end
 classcanvas 133525 class_ref 144021 // LogObject
   classdiagramsettings member_max_width 0 end
-  xyz 64.3066 232.893 2000
+  xyz 65.3066 232.893 2000
 end
 classcanvas 133653 class_ref 144149 // NamedLogObject
   classdiagramsettings member_max_width 0 end
-  xyz 64.7585 282.767 2000
+  xyz 65.7585 282.767 2000
 end
 classcanvas 133781 class_ref 144277 // Switchboard
   classdiagramsettings member_max_width 0 end
@@ -94,7 +94,7 @@ packagecanvas 137109
 end
 packagecanvas 137237 
   package_ref 135189 // Data
-   color verylightgray  xyzwh 33 30 0 371 345
+   color verylightgray  xyzwh 34 30 0 371 345
 end
 packagecanvas 137621 
   package_ref 135061 // Output
@@ -113,7 +113,7 @@ end
 classcanvas 142613 class_ref 136981 // Configuration
   classdiagramsettings member_max_width 0 end
   color lightgreen
-  xyz 805 681 2000
+  xyz 797 676 2000
 end
 relationcanvas 129685 relation_ref 128021 // <unidirectional association>
   from ref 128149 z 2001 to ref 128021
@@ -188,7 +188,7 @@ relationcanvas 134165 relation_ref 150421 // <unidirectional association>
   no_multiplicity_a no_multiplicity_b
 end
 relationcanvas 134293 relation_ref 150549 // <unidirectional association>
-  decenter_end 543
+  decenter_end 530
   from ref 133781 z 2001 to ref 133013
   no_role_a no_role_b
   no_multiplicity_a no_multiplicity_b
@@ -246,14 +246,6 @@ relationcanvas 136213 relation_ref 151957 // <generalisation>
   no_role_a no_role_b
   no_multiplicity_a no_multiplicity_b
 end
-relationcanvas 140181 relation_ref 152085 // <generalisation>
-  geometry VHV
-  from ref 129045 z 2006 to point 603 642
-  line 140309 z 2006 to point 595 642
-  line 140437 z 2006 to ref 134805
-  no_role_a no_role_b
-  no_multiplicity_a no_multiplicity_b
-end
 relationcanvas 141205 relation_ref 152597 // <composition>
   geometry VHr
   from ref 133781 z 2007 to point 106 473
@@ -268,14 +260,15 @@ relationcanvas 141333 relation_ref 152725 // <composition>
   role_a_pos 758 506 3000 no_role_b
   multiplicity_a_pos 730 506 3000 no_multiplicity_b
 end
-relationcanvas 141973 relation_ref 152853 // <dependency>
-  from ref 133781 z 2001 to ref 129045
-  no_role_a no_role_b
-  no_multiplicity_a no_multiplicity_b
-end
 relationcanvas 142741 relation_ref 159637 // <aggregation>
   from ref 134805 z 2006 to ref 142613
-  role_a_pos 757 668 3000 no_role_b
-  multiplicity_a_pos 786 693 3000 no_multiplicity_b
+  role_a_pos 749 664 3000 no_role_b
+  multiplicity_a_pos 778 689 3000 no_multiplicity_b
+end
+relationcanvas 142997 relation_ref 166165 // <unidirectional association>
+  decenter_end 838
+  from ref 129045 z 2001 to ref 133013
+  no_role_a no_role_b
+  no_multiplicity_a no_multiplicity_b
 end
 end

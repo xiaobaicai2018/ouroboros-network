@@ -1,18 +1,19 @@
-window_sizes 1709 1322 337 1366 1206 64
+window_sizes 1709 855 337 1366 739 64
 cleanlooks_style
 diagrams
-  classdiagram_ref 128021 // Overview_Classes
-    1030 1063 100 A4-Landscape 0 0
+  active  classdiagram_ref 128021 // Overview_Classes
+    1366 739 100 A4-Landscape 75 0
   collaborationdiagram_ref 135317 // Configuration_Update_OutputSelection
     805 591 100 A4 9 0
   collaborationdiagram_ref 128405 // Configuration_Update_SeverityFilter
     805 591 100 A4 0 21
   collaborationdiagram_ref 128149 // Configuration_Apply_SeverityFilter
     1092 964 100 A4 0 0
-  active  statediagram_ref 148629 // Backend_STM
+  statediagram_ref 148629 // Backend_STM
     1000 654 100 A4 0 0
 end
 show_stereotypes
+selected pseudostate_ref 128277 // final
 open
   classview_ref 128021 // Overview
   
@@ -24,8 +25,11 @@ open
   class_ref 137493 // CardanoFeature
   class_ref 129173 // EKGView
   class_ref 144533 // Backend
+  class_ref 144277 // Switchboard
   state_ref 128277 // messaging
+  pseudostate_ref 128277 // final
   state_ref 128405 // takedown
+  class_ref 129045 // ConfigurationView
   class_ref 136981 // Configuration
   class_ref 130197 // LoggerName
 end
