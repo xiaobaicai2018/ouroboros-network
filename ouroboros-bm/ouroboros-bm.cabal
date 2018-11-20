@@ -73,6 +73,7 @@ executable gui-example
   ghc-options:         -threaded -Wall -O2 "-with-rtsopts=-N"
   build-depends:       base,
                        ouroboros-bm,
+                       text,
                        threepenny-gui
 
 test-suite tests

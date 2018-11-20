@@ -24,6 +24,7 @@ module Cardano.BM.Trace
     , transformTrace
     -- * log functions
     , traceNamedObject
+    , traceNamedItem
     , logDebug,   logDebugS,   logDebugP,   logDebugUnsafeP
     , logError,   logErrorS,   logErrorP,   logErrorUnsafeP
     , logInfo,    logInfoS,    logInfoP,    logInfoUnsafeP
