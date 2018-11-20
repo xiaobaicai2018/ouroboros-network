@@ -1,0 +1,504 @@
+format 221
+"Output" // Cardano.BM::Output
+  revision 2
+  modified_by 21 "axeld"
+  // class settings
+  
+  classdiagramsettings member_max_width 0 end
+  
+  classcompositediagramsettings end
+  
+  usecasediagramsettings end
+  
+  sequencediagramsettings end
+  
+  collaborationdiagramsettings end
+  
+  objectdiagramsettings end
+  
+  objectcompositediagramsettings end
+  
+  componentdiagramsettings
+   end
+  
+  deploymentdiagramsettings
+   end
+  
+  statediagramsettings
+   end
+  
+  activitydiagramsettings
+   end
+  
+  classview 141717 "Output Classes"
+    
+    classdiagramsettings member_max_width 0 end
+    
+    classcompositediagramsettings end
+    
+    collaborationdiagramsettings end
+    
+    objectdiagramsettings end
+    
+    objectcompositediagramsettings end
+    
+    sequencediagramsettings end
+    
+    statediagramsettings
+     end
+    
+    
+    activitydiagramsettings
+     end
+    class 144405 "Katip"
+      visibility package 
+      cpp_decl ""
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl "${comment}${abstract}${custom}valuetype ${name}${inherit} {
+${members}};
+"
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 150421 // scribe (<unidirectional association>)
+	relation 150421 --->
+	  a role_name "scribe" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 150421 // scribe (<unidirectional association>)
+	  b parent class_ref 144277 // Switchboard
+      end
+
+      classrelation 160021 // <unidirectional association>
+	relation 159381 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 160021 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+    end
+
+    class 129685 "LogSink"
+      visibility package stereotype "Backend"
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 151189 // <generalisation>
+	relation 151189 ---|>
+	  a public
+	    idl "${type}"
+	    classrelation_ref 151189 // <generalisation>
+	  b parent class_ref 144533 // Backend
+      end
+    end
+
+    class 129173 "EKGView"
+      visibility package stereotype "Backend"
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 130453 // <unidirectional association>
+	relation 130453 --->
+	  a role_name "" private
+	    cpp default "    ${comment}${static}${thread_local}${mutable}${volatile}${const}${type} * ${name}${value};
+"
+	    classrelation_ref 130453 // <unidirectional association>
+	  b parent class_ref 128405 // Controller
+      end
+
+      operation 136213 "setup"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 136469 "createLabel"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 136597 "createCounter"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 136725 "createDistribution"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      classrelation 151317 // <generalisation>
+	relation 151317 ---|>
+	  a public
+	    idl "${type}"
+	    classrelation_ref 151317 // <generalisation>
+	  b parent class_ref 144533 // Backend
+      end
+    end
+
+    class 129045 "ConfigurationView"
+      visibility package stereotype "Backend"
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 130325 // <unidirectional association>
+	relation 130325 --->
+	  a role_name "" private
+	    cpp default "    ${comment}${static}${thread_local}${mutable}${volatile}${const}${type} * ${name}${value};
+"
+	    classrelation_ref 130325 // <unidirectional association>
+	  b parent class_ref 128405 // Controller
+      end
+
+      operation 128277 "addSeverityFilter"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}{
+  ${body}}
+"
+	
+	
+	
+	
+      end
+
+      operation 128533 "removeSeverityFilter"
+	public explicit_return_type ""
+	nparams 0
+	cpp_decl "    ${comment}${friend}${static}${inline}${virtual}${type} ${name}${(}${)}${const}${volatile}${throw}${abstract};
+"
+	cpp_def "${comment}${inline}${type} ${class}::${name}${(}${)}${const}${volatile}${throw}${staticnl}{
+  ${body}}
+"
+	
+	
+	
+	
+      end
+
+      classrelation 137237 // <unidirectional association>
+	relation 137237 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 137237 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+
+      classrelation 152085 // <generalisation>
+	relation 152085 ---|>
+	  a public
+	    idl "${type}"
+	    classrelation_ref 152085 // <generalisation>
+	  b parent class_ref 144533 // Backend
+      end
+
+      operation 144533 "addOutputSelection"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      classrelation 160149 // <unidirectional association>
+	relation 159509 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 160149 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+    end
+
+    class 128917 "Aggregator"
+      visibility package stereotype "Backend"
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 151445 // <generalisation>
+	relation 151445 ---|>
+	  a public
+	    idl "${type}"
+	    classrelation_ref 151445 // <generalisation>
+	  b parent class_ref 144533 // Backend
+      end
+    end
+
+    class 144533 "Backend"
+      abstract visibility package 
+      cpp_decl ""
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl "${comment}${abstract}${custom}valuetype ${name}${inherit} {
+${members}};
+"
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      operation 144149 "setup"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "c" type class_ref 136981 // Configuration
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${d0} ${t0} ${p0}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 144277 "takedown"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 144405 "pass"
+	public explicit_return_type ""
+	nparams 1
+	  param in name "obj" type class_ref 144149 // NamedLogObject
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${d0} ${t0} ${p0}${)}${raisesnl}${raises};
+"
+      end
+
+      classrelation 153237 // queue (<composition>)
+	relation 152725 *---
+	  a role_name "queue" multiplicity "1" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 153237 // queue (<composition>)
+	  b role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 153365 // <composition>
+      end
+
+      classrelation 160277 // config (<aggregation>)
+	relation 159637 o---
+	  a role_name "config" multiplicity "1" public
+	    classrelation_ref 160277 // config (<aggregation>)
+	  b role_name "" package
+	    classrelation_ref 160405 // <aggregation>
+      end
+    end
+
+    class 144277 "Switchboard"
+      visibility package stereotype "Output selection"
+      cpp_decl ""
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl "${comment}${abstract}${custom}valuetype ${name}${inherit} {
+${members}};
+"
+      explicit_switch_type ""
+      mysql_decl ""
+      
+      classrelation 150549 // <unidirectional association>
+	relation 150549 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 150549 // <unidirectional association>
+	  b parent class_ref 136981 // Configuration
+      end
+
+      classrelation 150677 // <unidirectional association>
+	relation 150677 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 150677 // <unidirectional association>
+	  b parent class_ref 129685 // LogSink
+      end
+
+      classrelation 150805 // <unidirectional association>
+	relation 150805 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 150805 // <unidirectional association>
+	  b parent class_ref 129173 // EKGView
+      end
+
+      classrelation 150933 // <unidirectional association>
+	relation 150933 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 150933 // <unidirectional association>
+	  b parent class_ref 128917 // Aggregator
+      end
+
+      classrelation 151573 // <dependency>
+	relation 151573 -_->
+	  a public
+	    classrelation_ref 151573 // <dependency>
+	  b parent class_ref 128917 // Aggregator
+      end
+
+      classrelation 151701 // <dependency>
+	relation 151701 -_->
+	  a public
+	    classrelation_ref 151701 // <dependency>
+	  b parent class_ref 129173 // EKGView
+      end
+
+      classrelation 151829 // <dependency>
+	relation 151829 -_->
+	  a public
+	    classrelation_ref 151829 // <dependency>
+	  b parent class_ref 129685 // LogSink
+      end
+
+      classrelation 151957 // <generalisation>
+	relation 151957 ---|>
+	  a private
+	    idl "${type}"
+	    classrelation_ref 151957 // <generalisation>
+	  b parent class_ref 144533 // Backend
+      end
+
+      classrelation 152981 // queue (<composition>)
+	relation 152597 *---
+	  a role_name "queue" multiplicity "1" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 152981 // queue (<composition>)
+	  b role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 153109 // <composition>
+      end
+
+      classrelation 153493 // <dependency>
+	relation 152853 -_->
+	  a public
+	    classrelation_ref 153493 // <dependency>
+	  b parent class_ref 129045 // ConfigurationView
+      end
+    end
+
+    state 128021 "Backend_Statemachine"
+      stereotype "machine"
+      statediagram 148629 "Backend_STM"
+	statediagramsettings draw_all_relations no
+	 end
+	size A4
+      end
+
+      state 128149 "setup"
+	specification operation_ref 136213 // setup
+	transition 128149 "<transition>"
+	  on state_ref 128277 // messaging
+	  external 
+	end
+      end
+
+      state 128277 "messaging"
+	specification operation_ref 144405 // pass
+	transition 128661 "<transition>"
+	  on state_ref 128277 // messaging
+	end
+
+	transition 128917 "<transition>"
+	  on state_ref 128405 // takedown
+	  external 
+	end
+      end
+
+      pseudostate 128277 final 
+      end
+
+      state 128405 "takedown"
+	specification operation_ref 144277 // takedown
+	transition 128277 "<transition>"
+	  on pseudostate_ref 128277 // final
+	  external 
+	end
+      end
+
+      pseudostate 128405 initial 
+	transition 128533 "<transition>"
+	  on state_ref 128149 // setup
+	  external 
+	end
+      end
+
+    end
+  end
+end

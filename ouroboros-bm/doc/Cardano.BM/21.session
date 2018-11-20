@@ -1,25 +1,32 @@
-window_sizes 1843 1139 337 1500 1023 64
+window_sizes 1709 1322 337 1366 1206 64
 cleanlooks_style
 diagrams
   classdiagram_ref 128021 // Overview_Classes
-    942 661 100 A4 0 0
-  active  componentdiagram_ref 135445 // NodeShell
-    836 652 100 A4 0 0
-  sequencediagram_ref 135573 // Node-Shell Functionality
-    652 668 100 A4 0 0
+    1030 1063 100 A4-Landscape 0 0
+  collaborationdiagram_ref 135317 // Configuration_Update_OutputSelection
+    805 591 100 A4 9 0
+  collaborationdiagram_ref 128405 // Configuration_Update_SeverityFilter
+    805 591 100 A4 0 21
+  collaborationdiagram_ref 128149 // Configuration_Apply_SeverityFilter
+    1092 964 100 A4 0 0
+  active  statediagram_ref 148629 // Backend_STM
+    1000 654 100 A4 0 0
 end
 show_stereotypes
-selected class_ref 137493 // CardanoFeature
 open
-  class_ref 128021 // Trace
-  class_ref 129173 // EKGView
-  class_ref 129301 // Counters
-  class_ref 130197 // LoggerName
+  classview_ref 128021 // Overview
+  
+  package_ref 134933 // Observer
   classview_ref 128149 // Configuration
   classview_ref 128277 // Counters
   classview_ref 134805 // EKG
   classview_ref 134933 // TeeTrace
-  componentview_ref 128021 // Node-Shell
   class_ref 137493 // CardanoFeature
+  class_ref 129173 // EKGView
+  class_ref 144533 // Backend
+  state_ref 128277 // messaging
+  state_ref 128405 // takedown
+  class_ref 136981 // Configuration
+  class_ref 130197 // LoggerName
 end
 end
