@@ -33,24 +33,28 @@ module Cardano.BM.Trace
 
     ) where
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar, readMVar)
 import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
 import qualified Control.Monad.STM as STM
-
 import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
+import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
+import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data
 import           Cardano.BM.Controller (appendWithDot, checkSeverity, findTraceTransformer, getNamedSeverity, setNamedSeverity)
+import qualified Cardano.BM.Internal as Internal
+import           Cardano.BM.Log (logItem')
 
-import           System.IO.Unsafe (unsafePerformIO)
+import qualified Katip as K
+
 \end{code}
 %endif
 
@@ -104,6 +108,25 @@ stdoutTrace = BaseTrace $ Op $ \lognamed ->
                 output (lnName lognamed) $ toStrict (encodeToLazyText obj)
   where
     output nm msg = TIO.putStrLn $ nm <> " :: " <> msg
+
+\end{code}
+
+\subsubsection{Trace into katip's queue}\label{code:katipTrace}
+
+\begin{code}
+katipTrace :: {- MVar LoggingHandler -> -} TraceNamed IO
+katipTrace = BaseTrace $ Op $ \lognamed -> do
+    lh <- readMVar Internal.loggingHandler
+    mayEnv <- Internal.getLogEnv lh
+    case mayEnv of
+        Nothing -> error "logging not yet initialized. Abort."
+        Just env -> logItem'
+                        lognamed
+                        (K.Namespace (T.split (=='.') (lnName lognamed)))
+                        env
+                        Nothing
+                        (Internal.sev2klog Info)
+                        (K.logStr ("empty"::Text))
 
 \end{code}
 

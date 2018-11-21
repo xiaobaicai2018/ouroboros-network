@@ -2,9 +2,11 @@
 \subsection{Data}
 
 \begin{code}
-{-# LANGUAGE DeriveAnyClass    #-}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.BM.Data
   (
@@ -34,12 +36,13 @@ import qualified Control.Concurrent.STM.TVar as STM
 
 import           Control.Concurrent.MVar (MVar)
 
-import           Data.Aeson (ToJSON, toEncoding, toJSON)
+import           Data.Aeson (FromJSON (..), ToJSON, toEncoding, toJSON)
 import           Data.Map (Map)
 import           Data.Set (Set)
 import           Data.Text (Text)
 import           Data.Time.Units (Microsecond, toMicroseconds)
 import           Data.Unique (Unique, hashUnique)
+import           Data.Yaml (withText)
 
 import           GHC.Generics (Generic)
 
@@ -105,6 +108,9 @@ data LogNamed item = LogNamed
     , lnItem :: item
     } deriving (Show)
 
+deriving instance Generic item => Generic (LogNamed item)
+deriving instance (ToJSON item, Generic item) => ToJSON (LogNamed item)
+
 \end{code}
 
 \subsubsection{LogItem}\label{code:LogItem}
@@ -130,6 +136,23 @@ data LogSelection =
 -- severity of log message
 data Severity = Debug | Info | Warning | Notice | Error
                 deriving (Show, Eq, Ord, Generic, ToJSON)
+
+-- | Handwritten 'FromJSON' instance because the log config files
+--   contain a '+' after their severity that has to be dropped to
+--   be parsed into our 'Severity' datatype.
+instance FromJSON Severity where
+    parseJSON = withText "severity" $ \case
+                    "Debug+"   -> pure Debug
+                    "Debug"    -> pure Debug
+                    "Info+"    -> pure Info
+                    "Info"     -> pure Info
+                    "Notice+"  -> pure Notice
+                    "Notice"   -> pure Notice
+                    "Warning+" -> pure Warning
+                    "Warning"  -> pure Warning
+                    "Error+"   -> pure Error
+                    "Error"    -> pure Error
+                    _          -> pure Info   -- catch all
 
 \end{code}
 

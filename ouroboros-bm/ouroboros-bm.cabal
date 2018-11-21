@@ -21,7 +21,10 @@ library
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
                        Cardano.BM.Data
+                       Cardano.BM.Internal
+                       Cardano.BM.Log
                        Cardano.BM.MonadicObserver
+                       Cardano.BM.Scribes
                        Cardano.BM.Setup
                        Cardano.BM.STMObserver
                        Cardano.BM.Trace
@@ -32,19 +35,24 @@ library
   build-depends:       base,
                        aeson,
                        array,
+                       auto-update,
                        bytestring,
                        clock,
                        containers,
                        contravariant,
                        filepath,
+                       katip,
+                       lens,
                        mtl,
                        stm,
+                       template-haskell,
                        text,
                        time,
                        time-units,
                        transformers,
             		       unix,
-                       unordered-containers
+                       unordered-containers,
+                       yaml
 
   ghc-options:         -Wall
                        -fno-ignore-asserts
