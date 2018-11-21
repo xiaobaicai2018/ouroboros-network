@@ -48,10 +48,10 @@ import           Data.Text.Lazy (toStrict)
 import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.BaseTrace
-import           Cardano.BM.Output.Data
+import           Cardano.BM.Data
 import           Cardano.BM.Controller (appendWithDot, checkSeverity, findTraceTransformer, getNamedSeverity, setNamedSeverity)
 import qualified Cardano.BM.Output.Internal as Internal
-import           Cardano.BM.Output.Scribes (logItem')
+import qualified Cardano.BM.Output.Switchboard as Switchboard
 
 import qualified Katip as K
 
@@ -113,7 +113,7 @@ stdoutTrace = BaseTrace $ Op $ \lognamed ->
 
 \subsubsection{Trace into katip's queue}\label{code:katipTrace}
 
-\begin{code}
+\begin{spec}
 katipTrace :: {- MVar LoggingHandler -> -} TraceNamed IO
 katipTrace = BaseTrace $ Op $ \lognamed -> do
     lh <- readMVar Internal.loggingHandler
@@ -128,7 +128,15 @@ katipTrace = BaseTrace $ Op $ \lognamed -> do
                         (Internal.sev2klog Info)
                         (K.logStr (""::Text))
 
+\end{spec}
+
+\begin{code}
+katipTrace :: TraceNamed IO
+katipTrace = BaseTrace $ Op $ \lognamed -> do
+    Switchboard.pass lognamed
+
 \end{code}
+
 
 \subsubsection{Concrete Trace into a |TVar|}\label{code:traceInTVar}\label{code:traceInTVarIO}
 

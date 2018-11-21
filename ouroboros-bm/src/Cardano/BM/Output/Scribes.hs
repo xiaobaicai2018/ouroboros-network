@@ -39,7 +39,7 @@ import           System.IO (BufferMode (LineBuffering), Handle, hClose,
 
 import qualified Cardano.BM.Output.Internal as Internal
 import           Cardano.BM.TraceConfig (BackendKind (..))
--- import           Cardano.BM.Output.Data (LoggerName, Severity (..))
+-- import           Cardano.BM.Data (LoggerName, Severity (..))
 
 -- -- | create a katip scribe for logging to a file in JSON representation
 -- mkJsonFileScribe :: RotationParameters -> NamedSeverity -> Internal.FileDescription -> Log.Severity -> Verbosity -> IO Scribe
@@ -117,10 +117,11 @@ mkFileScribeH h colorize verbosity = do
                 TIO.hPutStrLn h $! toLazyText $ formatItem colorize verbosity item
     pure $ Scribe logger (hClose h)
 
+{-
 mkSwitchBoardScribe :: IO Scribe
 mkSwitchBoardScribe = do
     --TODO setup mkStdoutScribe
-    lhStdOut <- setupLogging "stdout-inside-SwithBoard" StdoutBE
+    lhStdOut <- setupLogging "stdout-inside-SwitchBoard" StdoutBE
 
     pure $ Scribe (logger lhStdOut) finalizer
   where
@@ -133,6 +134,7 @@ mkSwitchBoardScribe = do
             Nothing  -> error "logging not yet initialized. Abort."
             Just env -> Internal.logItem'' env item
     finalizer = pure () -- close all scribes
+-}
 
 -- | create a katip scribe for logging to the console
 mkStdoutScribe :: Verbosity -> IO Scribe
@@ -227,9 +229,9 @@ setupLogging cfoKey beKind = do
                                     --   (fromMaybe Debug $ lh ^. lhMinSeverity)
                                       V0
                         return [("stdout"{-lh ^. lhName-}, scribe)]
-                    SwitchBoardBE -> do
-                        scribe <- mkSwitchBoardScribe
-                        return [("switch-board"{-lh ^. lhName-}, scribe)]
+                    --SwitchBoardBE -> do
+                    --    scribe <- mkSwitchBoardScribe
+                    --    return [("switch-board"{-lh ^. lhName-}, scribe)]
                     -- FileJsonBE -> do
                     --     let bp = fromMaybe "./" basepath
                     --         fp = fromMaybe "node.json" $ lh ^. lhFpath

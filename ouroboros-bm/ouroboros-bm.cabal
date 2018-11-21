@@ -20,12 +20,13 @@ library
                        Cardano.BM.Counters
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
-                       Cardano.BM.MonadicObserver
-                       Cardano.BM.Output.Data
+                       Cardano.BM.Data
+                       Cardano.BM.Observer.Monadic
+                       Cardano.BM.Observer.STM
                        Cardano.BM.Output.Internal
                        Cardano.BM.Output.Scribes
+                       Cardano.BM.Output.Switchboard
                        Cardano.BM.Setup
-                       Cardano.BM.STMObserver
                        Cardano.BM.Trace
                        Cardano.BM.TraceConfig
   other-modules:

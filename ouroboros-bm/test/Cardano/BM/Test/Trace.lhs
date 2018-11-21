@@ -23,14 +23,15 @@ import           Data.Text (Text, append, pack)
 import qualified Data.Text as T
 
 import           Cardano.BM.Controller (insertInController, setMinSeverity, setNamedSeverity)
-import           Cardano.BM.Output.Data (CounterState (..), LogItem (..),
+import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
-                     TraceConfiguration (..), TraceTransformer (..), TraceContext(..), TraceController(..),
-                     diffTimeObserved, loggerName)
-import qualified Cardano.BM.MonadicObserver as MonadicObserver
+                     TraceConfiguration (..), TraceTransformer (..),
+                     TraceContext(..), TraceController(..), diffTimeObserved,
+                     loggerName)
+import qualified Cardano.BM.Observer.Monadic as MonadicObserver
+import qualified Cardano.BM.Observer.STM as STMObserver
 import           Cardano.BM.Setup (setupTrace)
-import qualified Cardano.BM.STMObserver as STMObserver
 import           Cardano.BM.Trace (Trace, appendName, logInfo, transformTrace)
 
 import           Test.Tasty (TestTree, testGroup)

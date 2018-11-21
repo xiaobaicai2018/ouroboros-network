@@ -8,7 +8,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.BM.Output.Data
+module Cardano.BM.Data
   (
     Trace
   , TraceNamed
@@ -21,6 +21,7 @@ module Cardano.BM.Output.Data
   , LogPrims (..)
   , LogObject (..)
   , ObservableInstance (..)
+  , NamedLogItem(..)
   , LogNamed (..)
   , LogItem (..)
   , LogSelection (..)
@@ -28,6 +29,7 @@ module Cardano.BM.Output.Data
   , Severity (..)
   , Counter (..)
   , CounterState (..)
+  , Configuration (..)
   , diffTimeObserved
   )
   where
@@ -47,6 +49,14 @@ import           Data.Yaml (withText)
 import           GHC.Generics (Generic)
 
 import           Cardano.BM.BaseTrace
+
+\end{code}
+
+type aliases and empty types
+\begin{code}
+type NamedLogItem = LogNamed LogObject
+
+data Configuration
 
 \end{code}
 

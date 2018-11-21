@@ -53,8 +53,8 @@ import           System.IO.Unsafe (unsafePerformIO)
 import qualified Katip as K
 import qualified Katip.Core as KC
 
-import           Cardano.BM.Output.Data (LogNamed (..), LogObject (..))
-import           Cardano.BM.Output.Data (LoggerName, Severity (..))
+import           Cardano.BM.Data (LogNamed (..), LogObject (..))
+import           Cardano.BM.Data (LoggerName, Severity (..))
 -- import           Cardano.BM.LoggerConfig (LoggerConfig (..))
 -- import           Paths_cardano_sl_util (version)
 

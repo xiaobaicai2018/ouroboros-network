@@ -81,17 +81,17 @@ import qualified Cardano.BM.Aggregation
 import qualified Cardano.BM.BaseTrace
 import qualified Cardano.BM.Controller
 import qualified Cardano.BM.Counters
-import qualified Cardano.BM.Output.Data
-import qualified Cardano.BM.MonadicObserver
-import qualified Cardano.BM.STMObserver
+import qualified Cardano.BM.Data
+import qualified Cardano.BM.Observer.Monadic
+import qualified Cardano.BM.Observer.STM
 import qualified Cardano.BM.Trace
 
 \end{code}
 %endif
 
-%include Cardano/BM/STMObserver.lhs
+%include Cardano/BM/Observer.STM.lhs
 
-%include Cardano/BM/MonadicObserver.lhs
+%include Cardano/BM/Observer.Monadic.lhs
 
 %include Cardano/BM/BaseTrace.lhs
 

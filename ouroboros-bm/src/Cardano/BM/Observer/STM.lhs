@@ -1,11 +1,11 @@
 
-\subsection{Cardano.BM.STMObserver}
+\subsection{Cardano.BM.Observer.STM}
 
 %if False
 \begin{code}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Cardano.BM.STMObserver
+module Cardano.BM.Observer.STM
     (
       bracketObserveIO
     , bracketObserveLogIO
@@ -15,8 +15,8 @@ import qualified Control.Monad.STM as STM
 
 import           Data.Text
 
-import           Cardano.BM.Output.Data (LogObject (..), TraceTransformer (..))
-import           Cardano.BM.MonadicObserver (observeClose, observeOpen)
+import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
+import           Cardano.BM.Observer.Monadic (observeClose, observeOpen)
 import           Cardano.BM.Trace (Trace, transformTrace)
 \end{code}
 %endif

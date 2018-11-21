@@ -25,7 +25,7 @@ import           Text.Read (readMaybe)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Output.Data (Counter (..), ObservableInstance (..),
+import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
                      TraceTransformer (..))
 \end{code}
 %endif
