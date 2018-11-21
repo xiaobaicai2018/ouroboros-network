@@ -1,6 +1,6 @@
 format 221
 "Data" // Cardano.BM::Data
-  revision 3
+  revision 4
   modified_by 21 "axeld"
   // class settings
   
@@ -303,6 +303,20 @@ ${members}};
     end
 
     class 151189 "Map"
+      visibility package 
+      cpp_decl ""
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl "${comment}${abstract}${custom}valuetype ${name}${inherit} {
+${members}};
+"
+      explicit_switch_type ""
+      mysql_decl ""
+      
+    end
+
+    class 157717 "NamedLogItem"
       visibility package 
       cpp_decl ""
       java_decl ""

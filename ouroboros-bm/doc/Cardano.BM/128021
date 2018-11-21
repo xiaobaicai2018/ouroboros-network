@@ -1,6 +1,6 @@
 format 221
 "Cardano.BM" // Cardano.BM
-  revision 9
+  revision 10
   modified_by 21 "axeld"
   // class settings
   
@@ -399,7 +399,7 @@ ${members}};
 	class_ref 144405 // Katip
       end
       provided_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
       required_classes
 	class_ref 144149 // NamedLogObject
@@ -411,11 +411,11 @@ ${members}};
 	class_ref 144277 // Switchboard
       end
       provided_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
       required_classes
 	class_ref 136981 // Configuration
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
     end
 
@@ -424,10 +424,10 @@ ${members}};
 	class_ref 128917 // Aggregator
       end
       provided_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
       required_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
     end
 
@@ -436,7 +436,7 @@ ${members}};
 	class_ref 129685 // LogSink
       end
       required_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
     end
 
@@ -448,7 +448,7 @@ ${members}};
 	class_ref 129173 // EKGView
       end
       required_classes
-	class_ref 144149 // NamedLogObject
+	class_ref 157717 // NamedLogItem
       end
     end
   end

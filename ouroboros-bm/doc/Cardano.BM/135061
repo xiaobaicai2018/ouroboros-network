@@ -1,6 +1,6 @@
 format 221
 "Output" // Cardano.BM::Output
-  revision 3
+  revision 4
   modified_by 21 "axeld"
   // class settings
   
@@ -238,7 +238,7 @@ ${members}};
       operation 144405 "pass"
 	public explicit_return_type ""
 	nparams 1
-	  param in name "obj" type class_ref 144149 // NamedLogObject
+	  param in name "obj" type class_ref 157717 // NamedLogItem
 	
 	
 	
@@ -356,7 +356,6 @@ ${members}};
 "
 	    classrelation_ref 153109 // <composition>
       end
-
     end
 
     state 128021 "Backend_Statemachine"

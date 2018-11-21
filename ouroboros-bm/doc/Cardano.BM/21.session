@@ -1,7 +1,7 @@
 window_sizes 1709 855 337 1366 739 64
 cleanlooks_style
 diagrams
-  active  classdiagram_ref 128021 // Overview_Classes
+  classdiagram_ref 128021 // Overview_Classes
     1366 739 100 A4-Landscape 75 0
   collaborationdiagram_ref 135317 // Configuration_Update_OutputSelection
     805 591 100 A4 9 0
@@ -9,15 +9,15 @@ diagrams
     805 591 100 A4 0 21
   collaborationdiagram_ref 128149 // Configuration_Apply_SeverityFilter
     1092 964 100 A4 0 0
-  statediagram_ref 148629 // Backend_STM
+  active  statediagram_ref 148629 // Backend_STM
     1000 654 100 A4 0 0
 end
 show_stereotypes
-selected pseudostate_ref 128277 // final
+selected statediagram_ref 148629 // Backend_STM
 open
   classview_ref 128021 // Overview
   
-  package_ref 134933 // Observer
+package_ref 134933 // Observer
   classview_ref 128149 // Configuration
   classview_ref 128277 // Counters
   classview_ref 134805 // EKG
