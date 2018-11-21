@@ -1,11 +1,17 @@
-{-# LANGUAGE LambdaCase      #-}
-{-# LANGUAGE RecordWildCards #-}
+{-# LANGUAGE DefaultSignatures    #-}
+{-# LANGUAGE DeriveAnyClass       #-}
+{-# LANGUAGE FlexibleInstances    #-}
+{-# LANGUAGE LambdaCase           #-}
+{-# LANGUAGE RecordWildCards      #-}
+{-# LANGUAGE StandaloneDeriving   #-}
+{-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
--- | internal definitions for "Cardano.BM.Log"
+-- | internal definitions for "Cardano.BM.Output.Log"
 
-module Cardano.BM.Internal
-       ( --newConfig
-       {-,-} registerBackends
+module Cardano.BM.Output.Internal
+       ( newConfig
+       , registerBackends
        , s2kname
        , sev2klog
     --    , updateConfig
@@ -17,28 +23,40 @@ module Cardano.BM.Internal
        , modifyLinesLogged
        , LoggingHandler (..)
        , loggingHandler
+       , logItem'
+       , logItem''
+       , ToObject (..)
     --    , FileDescription (..)
     --    , mkFileDescription
        ) where
 
 import           Control.AutoUpdate (UpdateSettings (..), defaultUpdateSettings,
                      mkAutoUpdate)
+import           Control.Concurrent (myThreadId)
 import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
                      withMVar)
--- import           Control.Exception.Safe (Exception (..))
+import           Control.Lens ((^.))
+import           Control.Monad (forM_)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Control.Monad.STM (atomically)
+import           Data.Aeson (Object, ToJSON (..), Value (..))
+import           Data.Map.Strict (elems)
 import           Data.String (fromString)
 import qualified Data.Text as T
 import           Data.Time (UTCTime, getCurrentTime)
+import qualified Language.Haskell.TH as TH
 import           System.IO.Unsafe (unsafePerformIO)
+-- import           Control.Exception.Safe (Exception (..))
 -- import           Data.Version (showVersion)
--- import           Paths_cardano_sl_util (version)
 -- import           System.FilePath (splitFileName, (</>))
 
 import qualified Katip as K
 import qualified Katip.Core as KC
 
-import           Cardano.BM.Data (LoggerName, Severity (..))
+import           Cardano.BM.Output.Data (LogNamed (..), LogObject (..))
+import           Cardano.BM.Output.Data (LoggerName, Severity (..))
 -- import           Cardano.BM.LoggerConfig (LoggerConfig (..))
+-- import           Paths_cardano_sl_util (version)
 
 -- | internal access to logging handler
 {-# NOINLINE loggingHandler #-}
@@ -113,11 +131,11 @@ modifyLinesLogged lh f = do
 -- updateConfig lh lc = modifyMVar_ (getLSI lh) $ \LoggingHandlerInternal{..} ->
 --     return $ LoggingHandlerInternal (Just lc) lsiLogEnv lsiLogContext lsiLinesLogged
 
--- -- | create internal state given a configuration @LoggerConfig@
--- newConfig :: LoggerConfig -> IO LoggingHandler
--- newConfig lc = do
---     mv <- newMVar $ LoggingHandlerInternal (Just lc) Nothing Nothing 0
---     return $ LoggingHandler mv
+-- | create internal state given a configuration @LoggerConfig@
+newConfig :: {- LoggerConfig -> -} IO LoggingHandler
+newConfig {-lc-} = do
+    mv <- newMVar $ LoggingHandlerInternal {-(Just lc)-} Nothing Nothing 0
+    return $ LoggingHandler mv
 
 -- | register scribes in `katip`
 registerBackends :: T.Text -> LoggingHandler -> [(T.Text, K.Scribe)] -> IO ()
@@ -144,3 +162,67 @@ scribeSettings :: KC.ScribeSettings
 scribeSettings = KC.ScribeSettings bufferSize
   where
     bufferSize = 5000   -- size of the queue (in log items)
+
+-- | Equivalent to katip's logItem without the `Katip m` constraint
+logItem'
+    :: (ToObject a, MonadIO m)
+    => a
+    -> KC.Namespace
+    -> K.LogEnv
+    -> Maybe TH.Loc
+    -> KC.Severity
+    -> KC.LogStr
+    -> m ()
+logItem' a ns env loc sev msg = do
+    liftIO $ do
+      item <- K.Item
+        <$> pure (env ^. KC.logEnvApp)
+        <*> pure (env ^. KC.logEnvEnv)
+        <*> pure sev
+        <*> (KC.mkThreadIdText <$> myThreadId)
+        <*> pure (env ^. KC.logEnvHost)
+        <*> pure (env ^. KC.logEnvPid)
+        <*> pure a
+        <*> pure msg
+        <*> (env ^. KC.logEnvTimer)
+        <*> pure ((env ^. KC.logEnvApp) <> ns)
+        <*> pure loc
+      forM_ (elems (env ^. KC.logEnvScribes)) $
+          \ (KC.ScribeHandle _ shChan) -> atomically (KC.tryWriteTBQueue shChan (KC.NewItem item))
+
+logItem''
+    :: (ToObject a, MonadIO m)
+    => K.LogEnv
+    -> KC.Item a
+    -> m ()
+logItem'' env item =
+    liftIO $
+      forM_ (elems (env ^. KC.logEnvScribes)) $
+          \ (KC.ScribeHandle _ shChan) -> atomically (KC.tryWriteTBQueue shChan (KC.NewItem item))
+
+-- | Katip requires JSON objects to be logged as context. This
+-- typeclass provides a default instance which uses ToJSON and
+-- produces an empty object if 'toJSON' results in any type other than
+-- object. If you have a type you want to log that produces an Array
+-- or Number for example, you'll want to write an explicit instance
+-- here. You can trivially add a ToObject instance for something with
+-- a ToJSON instance like:
+--
+-- > instance ToObject Foo
+class ToObject a where
+    toObject :: a -> Object
+    default toObject :: ToJSON a => a -> Object
+    toObject v = case toJSON v of
+        Object o -> o
+        _        -> mempty
+
+deriving instance ToObject (LogNamed LogObject)
+
+instance ToObject () where
+    toObject _ = mempty
+
+instance {-# INCOHERENT #-} ToObject v => KC.ToObject v where
+    toObject = toObject
+
+instance {-# INCOHERENT #-} KC.ToObject a => KC.LogItem a where
+    payloadKeys _ _ = KC.AllKeys

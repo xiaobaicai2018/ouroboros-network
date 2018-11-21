@@ -8,7 +8,7 @@
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
 
-module Cardano.BM.Data
+module Cardano.BM.Output.Data
   (
     Trace
   , TraceNamed
@@ -110,6 +110,14 @@ data LogNamed item = LogNamed
 
 deriving instance Generic item => Generic (LogNamed item)
 deriving instance (ToJSON item, Generic item) => ToJSON (LogNamed item)
+
+-- Attach a 'ContextName' and Katip related info to something.
+data LogNamedPlus item = LogNamedPlus
+    { lnpName :: LoggerName
+
+    , lnpItem :: item
+    } deriving (Show)
+
 
 \end{code}
 

@@ -23,7 +23,7 @@ import           Data.Text (Text, append, pack)
 import qualified Data.Text as T
 
 import           Cardano.BM.Controller (insertInController, setMinSeverity, setNamedSeverity)
-import           Cardano.BM.Data (CounterState (..), LogItem (..),
+import           Cardano.BM.Output.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..), TraceContext(..), TraceController(..),

@@ -20,8 +20,8 @@ import           Data.Text
 import           Data.Unique (hashUnique, newUnique)
 
 
-import           Cardano.BM.Data (CounterState (..), LogObject (..),
-                     TraceTransformer (..))
+import           Cardano.BM.Output.Data (CounterState (..), LogObject (..),
+                     TraceTransformer (..)) -- some of the data structures must be moved into Cardano.BM.Output.Data.hs
 import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject,
                      transformTrace)

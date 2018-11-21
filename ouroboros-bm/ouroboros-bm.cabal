@@ -20,14 +20,14 @@ library
                        Cardano.BM.Counters
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
-                       Cardano.BM.Data
-                       Cardano.BM.Internal
-                       Cardano.BM.Log
                        Cardano.BM.MonadicObserver
-                       Cardano.BM.Scribes
+                       Cardano.BM.Output.Data
+                       Cardano.BM.Output.Internal
+                       Cardano.BM.Output.Scribes
                        Cardano.BM.Setup
                        Cardano.BM.STMObserver
                        Cardano.BM.Trace
+                       Cardano.BM.TraceConfig
   other-modules:
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings

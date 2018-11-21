@@ -23,7 +23,7 @@ import           Control.Concurrent.MVar (modifyMVar_, withMVar)
 import           Data.Map (findWithDefault, insert, lookup)
 import           Data.Text (Text, take)
 
-import           Cardano.BM.Data (LogItem (..), LoggerName, Severity (..), Trace,
+import           Cardano.BM.Output.Data (LogItem (..), LoggerName, Severity (..), Trace,
                      TraceContext (..), TraceController (..),
                      TraceTransformer (..))
 

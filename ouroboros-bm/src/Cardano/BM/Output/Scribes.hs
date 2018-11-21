@@ -3,7 +3,7 @@
 
 -- | provide backends for `katip`
 
-module Cardano.BM.Scribes
+module Cardano.BM.Output.Scribes
     ( mkStdoutScribe
     , mkStderrScribe
     -- , mkDevNullScribe
@@ -11,35 +11,35 @@ module Cardano.BM.Scribes
     -- , mkJsonFileScribe
     ) where
 
+import           Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
+import           Control.Exception (bracket_)
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import qualified Data.Text as T
+import           Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
+import qualified Data.Text.Lazy.IO as TIO
+import           Data.Time.Format (defaultTimeLocale, formatTime)
+import qualified Katip as K
+import           Katip.Core (Item (..), Scribe (..), Severity (..),
+                     Verbosity (..), getThreadIdText, intercalateNs,
+                     renderSeverity, unLogStr)
+import           Katip.Scribes.Handle (brackets)
+import           System.IO (BufferMode (LineBuffering), Handle, hClose,
+                     hSetBuffering, stderr, stdout)
 -- import           Control.AutoUpdate (UpdateSettings (..), defaultUpdateSettings,
 --                      mkAutoUpdate)
 -- import           Control.Concurrent.MVar (modifyMVar_, newMVar, putMVar,
 --                      takeMVar)
-import           Control.Concurrent.MVar (newMVar, putMVar, takeMVar)
-import           Control.Exception (bracket_)
 -- import           Control.Exception.Safe (catchIO)
 -- import           Data.Aeson.Text (encodeToLazyText)
 -- import qualified Data.HashMap.Strict as HM
-import qualified Data.Text as T
-import           Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
-import qualified Data.Text.Lazy.IO as TIO
 -- import           Data.Time (diffUTCTime)
-import           Data.Time.Format (defaultTimeLocale, formatTime)
-import           Katip.Core
-import           Katip.Scribes.Handle (brackets)
-
--- import           Cardano.BM.Data (LoggerName, Severity (..))
--- import qualified Pos.Util.Log.Internal as Internal
--- import           Pos.Util.Log.LoggerConfig (NamedSeverity,
---                      RotationParameters (..))
--- import           Pos.Util.Log.Rotator (cleanupRotator, evalRotator,
---                      initializeRotator)
-
 -- import           System.Directory (createDirectoryIfMissing)
 -- import           System.IO (BufferMode (LineBuffering), Handle,
---                      IOMode (WriteMode), hClose, hSetBuffering, stderr, stdout)
-import           System.IO (BufferMode (LineBuffering), Handle, hClose,
-                     hSetBuffering, stderr, stdout)
+                    --  IOMode (WriteMode), hClose, hSetBuffering, stderr, stdout)
+
+import qualified Cardano.BM.Output.Internal as Internal
+import           Cardano.BM.TraceConfig (BackendKind (..))
+-- import           Cardano.BM.Output.Data (LoggerName, Severity (..))
 
 -- -- | create a katip scribe for logging to a file in JSON representation
 -- mkJsonFileScribe :: RotationParameters -> NamedSeverity -> Internal.FileDescription -> Log.Severity -> Verbosity -> IO Scribe
@@ -117,6 +117,23 @@ mkFileScribeH h colorize verbosity = do
                 TIO.hPutStrLn h $! toLazyText $ formatItem colorize verbosity item
     pure $ Scribe logger (hClose h)
 
+mkSwitchBoardScribe :: IO Scribe
+mkSwitchBoardScribe = do
+    --TODO setup mkStdoutScribe
+    lhStdOut <- setupLogging "stdout-inside-SwithBoard" StdoutBE
+
+    pure $ Scribe (logger lhStdOut) finalizer
+  where
+    logger :: Internal.ToObject a => Internal.LoggingHandler -> Item a -> IO ()
+    logger lh item = do
+        -- add some info
+        -- pass to stdoutScribe queue
+        mayEnv <- Internal.getLogEnv lh
+        case mayEnv of
+            Nothing  -> error "logging not yet initialized. Abort."
+            Just env -> Internal.logItem'' env item
+    finalizer = pure () -- close all scribes
+
 -- | create a katip scribe for logging to the console
 mkStdoutScribe :: Verbosity -> IO Scribe
 mkStdoutScribe = mkFileScribeH stdout True
@@ -180,3 +197,81 @@ formatItem withColor _verb Item{..} =
     colorize c m
       | withColor = "\ESC["<> c <> "m" <> m <> "\ESC[0m"
       | otherwise = m
+
+-- | setup logging according to configuration @LoggerConfig@
+--   the backends (scribes) will be registered with katip
+setupLogging :: MonadIO m => T.Text -> BackendKind{-LoggerConfig-} -> m Internal.LoggingHandler
+setupLogging cfoKey beKind = do
+    lh <- liftIO $ Internal.newConfig --lc
+    scribes <- liftIO $ meta lh beKind--lc
+    liftIO $ Internal.registerBackends cfoKey lh scribes
+    return lh
+      where
+        -- returns a list of: (name, Scribe, finalizer)
+        meta :: Internal.LoggingHandler -> BackendKind{-LoggerConfig-} -> IO [(T.Text, K.Scribe)]
+        meta _lh beKind {-_lc-} = do
+            -- setup scribes according to configuration
+            -- let lhs = _lc ^. lcLoggerTree ^. ltHandlers ^.. each
+            --     basepath = _lc ^. lcBasePath
+                -- sevfilter = _lc ^. lcLoggerTree ^. ltNamedSeverity
+                -- default rotation parameters: max. 24 hours, max. 10 files kept, max. size 5 MB
+                -- rotation = fromMaybe (RotationParameters { _rpMaxAgeHours=24,
+                --                                            _rpKeepFilesNum=10,
+                --                                            _rpLogLimitBytes=5*1000*1000 })
+                --                      (_lc ^. lcRotation)
+            -- forM lhs (\lh -> case (lh ^. lhBackend) of
+            case beKind of
+                    StdoutBE -> do
+                        scribe <- mkStdoutScribe
+                                      --sevfilter
+                                    --   (fromMaybe Debug $ lh ^. lhMinSeverity)
+                                      V0
+                        return [("stdout"{-lh ^. lhName-}, scribe)]
+                    SwitchBoardBE -> do
+                        scribe <- mkSwitchBoardScribe
+                        return [("switch-board"{-lh ^. lhName-}, scribe)]
+                    -- FileJsonBE -> do
+                    --     let bp = fromMaybe "./" basepath
+                    --         fp = fromMaybe "node.json" $ lh ^. lhFpath
+                    --         fdesc = Internal.mkFileDescription bp fp
+                    --         nm = lh ^. lhName
+                    --     scribe <- mkJsonFileScribe
+                    --                   rotation
+                    --                   sevfilter
+                    --                   fdesc
+                    --                   (fromMaybe Debug $ lh ^. lhMinSeverity)
+                    --                   K.V3
+                    --     return (nm, scribe)
+                    -- FileTextBE -> do
+                    --     let bp = fromMaybe "./" basepath
+                    --         fp = fromMaybe "node.log" $ lh ^. lhFpath
+                    --         fdesc = Internal.mkFileDescription bp fp
+                    --         nm = lh ^. lhName
+                    --     scribe <- mkTextFileScribe
+                    --                   rotation
+                    --                   sevfilter
+                    --                   fdesc
+                    --                   True
+                    --                   (fromMaybe Debug $ lh ^. lhMinSeverity)
+                    --                   K.V0
+                    --     return (nm, scribe)
+                    -- StderrBE -> do
+                    --     scribe <- mkStderrScribe
+                    --                   sevfilter
+                    --                   (fromMaybe Debug $ lh ^. lhMinSeverity)
+                    --                   K.V0
+                    --     return (lh ^. lhName, scribe)
+                    -- DevNullBE -> do
+                    --     scribe <- mkDevNullScribe _lh
+                    --                   sevfilter
+                    --                   (fromMaybe Debug $ lh ^. lhMinSeverity)
+                    --                   K.V0
+                    --     return (lh ^. lhName, scribe)
+                --  )
+
+-- closeLogScribes :: MonadIO m => LoggingHandler -> m ()
+-- closeLogScribes lh = do
+--     mayle <- liftIO $ Internal.getLogEnv lh
+--     case mayle of
+--             Nothing -> error "logging not yet initialized. Abort."
+--             Just le -> void $ liftIO $ K.closeScribes le

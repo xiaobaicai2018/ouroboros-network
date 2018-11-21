@@ -12,7 +12,7 @@ module Cardano.BM.Counters.Dummy
       readCounters
     ) where
 
-import           Cardano.BM.Data (Counter, TraceTransformer (..))
+import           Cardano.BM.Output.Data (Counter, TraceTransformer (..))
 
 readCounters :: TraceTransformer -> IO [Counter]
 readCounters NoTrace             = return []

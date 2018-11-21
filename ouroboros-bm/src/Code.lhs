@@ -52,7 +52,7 @@ introduction ...
 \section{Overview}
 
 In figure \ref{fig:overview} we display the relationships among modules
-in |Cardano.BM|. The arrows indicate import of a module. The relationship with 
+in |Cardano.BM|. The arrows indicate import of a module. The relationship with
 a triangle at one end would signify "inheritance", but we use it to show
 that one module replaces the other in the namespace, thus refines its interface.
 
@@ -81,11 +81,11 @@ import qualified Cardano.BM.Aggregation
 import qualified Cardano.BM.BaseTrace
 import qualified Cardano.BM.Controller
 import qualified Cardano.BM.Counters
-import qualified Cardano.BM.Data
+import qualified Cardano.BM.Output.Data
 import qualified Cardano.BM.MonadicObserver
 import qualified Cardano.BM.STMObserver
 import qualified Cardano.BM.Trace
- 
+
 \end{code}
 %endif
 

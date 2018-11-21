@@ -15,7 +15,7 @@ import qualified Control.Monad.STM as STM
 
 import           Data.Text
 
-import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
+import           Cardano.BM.Output.Data (LogObject (..), TraceTransformer (..))
 import           Cardano.BM.MonadicObserver (observeClose, observeOpen)
 import           Cardano.BM.Trace (Trace, transformTrace)
 \end{code}

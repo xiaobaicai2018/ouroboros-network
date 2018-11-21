@@ -7,7 +7,7 @@ import qualified Data.Text as T
 import           Graphics.UI.Threepenny as UI
 
 import           Cardano.BM.Controller (setMinSeverity, setNamedSeverity)
-import           Cardano.BM.Data (LogSelection (..), OutputKind (..),
+import           Cardano.BM.Output.Data (LogSelection (..), OutputKind (..),
                      Severity (..), TraceConfiguration (..), TraceContext (..),
                      TraceTransformer (..))
 import           Cardano.BM.Setup (setupTrace)

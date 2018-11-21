@@ -48,10 +48,10 @@ import           Data.Text.Lazy (toStrict)
 import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.BaseTrace
-import           Cardano.BM.Data
+import           Cardano.BM.Output.Data
 import           Cardano.BM.Controller (appendWithDot, checkSeverity, findTraceTransformer, getNamedSeverity, setNamedSeverity)
-import qualified Cardano.BM.Internal as Internal
-import           Cardano.BM.Log (logItem')
+import qualified Cardano.BM.Output.Internal as Internal
+import           Cardano.BM.Output.Scribes (logItem')
 
 import qualified Katip as K
 
@@ -126,7 +126,7 @@ katipTrace = BaseTrace $ Op $ \lognamed -> do
                         env
                         Nothing
                         (Internal.sev2klog Info)
-                        (K.logStr ("empty"::Text))
+                        (K.logStr (""::Text))
 
 \end{code}
 
