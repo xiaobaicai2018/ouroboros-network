@@ -37,3 +37,11 @@ License: "free of use", no license.
 
 ![Backend state machine](Backend_STM.png)
 
+
+## Integration in Cardano.Shell
+
+![CardanoShell components](CardanoShell_Components.png)
+
+![CardanoShell sequence](CardanoShell_Seq.png)
+
+

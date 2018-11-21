@@ -1,6 +1,6 @@
 format 221
 "Cardano.BM"
-  revision 2
+  revision 3
   modified_by 21 "axeld"
 
 
@@ -51,4 +51,6 @@ format 221
   package_ref 134677 // Graphics.UI.Threepenny
 
   package_ref 134805 // System.Remote.Monitoring (EKG)
+
+  package_ref 141717 // Cardano.Shell
 end
