@@ -14,6 +14,7 @@ module Cardano.BM.Trace
       Trace
     , stdoutTrace
     , noTrace
+    , mainTrace
     , traceInTVar
     , traceInTVarIO
     , traceNamedInTVarIO
@@ -33,7 +34,7 @@ module Cardano.BM.Trace
 
     ) where
 
-import           Control.Concurrent.MVar (MVar, newMVar, withMVar, readMVar)
+import           Control.Concurrent.MVar (MVar, newMVar, withMVar)
 import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad (when)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
@@ -42,7 +43,6 @@ import           Data.Aeson.Text (encodeToLazyText)
 import           Data.Functor.Contravariant (Contravariant (..), Op (..))
 import           Data.Monoid ((<>))
 import           Data.Text (Text)
-import qualified Data.Text as T
 import qualified Data.Text.IO as TIO
 import           Data.Text.Lazy (toStrict)
 import           System.IO.Unsafe (unsafePerformIO)

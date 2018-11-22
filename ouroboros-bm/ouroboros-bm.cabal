@@ -14,7 +14,7 @@ cabal-version:       >=1.10
 library
   hs-source-dirs:      src
   exposed-modules:
-                       Cardano.BM.Aggregation
+                       Cardano.BM.Aggregated
                        Cardano.BM.BaseTrace
                        Cardano.BM.Controller
                        Cardano.BM.Counters
@@ -25,6 +25,7 @@ library
                        Cardano.BM.Observer.STM
                        Cardano.BM.Output.Katip
                        Cardano.BM.Output.Switchboard
+                       Cardano.BM.Output.Aggregation
                        Cardano.BM.Setup
                        Cardano.BM.Trace
                        Cardano.BM.TraceConfig
@@ -50,7 +51,7 @@ library
                        time,
                        time-units,
                        transformers,
-            		       unix,
+                       unix,
                        unordered-containers,
                        yaml
 
@@ -89,9 +90,9 @@ test-suite tests
   hs-source-dirs:      test
   main-is:             Main.lhs
   other-modules:       Cardano.BM.Test.Trace
-                       Cardano.BM.Test.Aggregation
+                       Cardano.BM.Test.Aggregated
                        Cardano.BM.Test.STM
-                       Cardano.BM.Arbitrary.Aggregation
+                       Cardano.BM.Arbitrary.Aggregated
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
   build-depends:       base,

@@ -29,7 +29,7 @@ module Cardano.BM.Data
   , Severity (..)
   , Counter (..)
   , CounterState (..)
-  , Configuration
+  , Configuration (..)
   , diffTimeObserved
   )
   where
@@ -56,7 +56,7 @@ type aliases and empty types
 \begin{code}
 type NamedLogItem = LogNamed LogObject
 
-data Configuration
+data Configuration = Configuration
 
 \end{code}
 

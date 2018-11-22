@@ -46,7 +46,7 @@ module Main
 
 import           Test.Tasty
 
-import qualified Cardano.BM.Test.Aggregation (tests)
+import qualified Cardano.BM.Test.Aggregated (tests)
 import qualified Cardano.BM.Test.STM (tests)
 import qualified Cardano.BM.Test.Trace (tests)
 
@@ -56,16 +56,16 @@ main = defaultMain tests
 tests :: TestTree
 tests =
   testGroup "ouroboros-bm"
-  [ Cardano.BM.Test.Aggregation.tests
+  [ Cardano.BM.Test.Aggregated.tests
   , Cardano.BM.Test.STM.tests
   , Cardano.BM.Test.Trace.tests
   ]
 \end{code}
 
-%include Cardano//BM//Arbitrary//Aggregation.lhs
+%include Cardano/BM/Arbitrary/Aggregated.lhs
 
-%include Cardano//BM//Test//Aggregation.lhs
-%include Cardano//BM//Test//STM.lhs
-%include Cardano//BM//Test//Trace.lhs
+%include Cardano/BM/Test/Aggregated.lhs
+%include Cardano/BM/Test/STM.lhs
+%include Cardano/BM/Test/Trace.lhs
 
 \end{document}

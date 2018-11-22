@@ -77,7 +77,7 @@ examples ...
 module Code
 where
 
-import qualified Cardano.BM.Aggregation
+import qualified Cardano.BM.Aggregated
 import qualified Cardano.BM.BaseTrace
 import qualified Cardano.BM.Controller
 import qualified Cardano.BM.Counters
@@ -107,10 +107,12 @@ import qualified Cardano.BM.Trace
 
 %include Cardano/BM/Data.lhs
 
-%include Cardano/BM/Aggregation.lhs
+%include Cardano/BM/Aggregated.lhs
 
 %include Cardano/BM/Output/Switchboard.lhs
 
 %include Cardano/BM/Output/Katip.lhs
+
+%include Cardano/BM/Output/Aggregation.lhs
 
 \end{document}
