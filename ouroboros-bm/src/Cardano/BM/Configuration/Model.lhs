@@ -10,7 +10,7 @@ module Cardano.BM.Configuration.Model
       setup
     , inspectSeverity
     , setSeverity
-    , getBackend
+    , getBackends
     , registerBackend
     --, inspectOutput
     --, takedown
@@ -20,9 +20,10 @@ import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
                      withMVar)
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
-import           Data.Text (Text)
+import           Data.Text (Text, pack)
 
-import           Cardano.BM.Data
+import           Cardano.BM.Data (Configuration, Severity (..), Backend (..), ScribeKind (..))
+import qualified Cardano.BM.Output.Katip as Cardano.BM.Output.Katip
 
 import           System.IO.Unsafe (unsafePerformIO)
 
@@ -47,21 +48,22 @@ data ConfigurationInternal = ConfigurationInternal
 --              config.logprefix = { path = "/mnt/disk/spacy" }
 
 getBackends :: Text -> IO (Maybe [Backend])
-    withMVar configuration $ \cg ->
-        outs <- HM.lookup name (cgMapOutput cg)
-        return $ case outs of
+getBackends name =
+    withMVar configuration $ \cg -> do
+        let outs = HM.lookup name (cgMapOutput cg)
+        case outs of
           -- default? stdout
           Nothing -> do
               os <- defaultBackends
-              Just os
-          Just os -> Just os
+              return $ Just os
+          Just os -> return $ Just os
 
 defaultBackends :: IO [Backend]
 defaultBackends = do
     -- read configuration?
-    return [ Backend {pass = Cardano.BM.Output.Katip.pass (show StdoutSK)},
-           , Backend {pass = Cardano.BM.Output.Katip.pass (show FileTextSK)},
-           , Backend {pass = Cardano.BM.Output.Katip.pass (show FileJsonSK)},
+    return [ Backend {pass = Cardano.BM.Output.Katip.pass (pack (show StdoutSK  ))}
+           , Backend {pass = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
+           , Backend {pass = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
            ]
 
 registerBackend :: Text -> Maybe Backend -> IO ()
@@ -80,10 +82,11 @@ inspectSeverity name =
 \end{code}
 
 \begin{code}
+-- if Maybe Severity given is Nothing then the entry for this name is deleted.
 setSeverity :: Text -> Maybe Severity -> IO ()
 setSeverity _name _sev = do
     cg <- takeMVar configuration
-    putMVar configuration $ 
+    putMVar configuration $ cg { cgMapSeverity = HM.update (const _sev) _name (cgMapSeverity cg) }
 
 \end{code}
 
@@ -96,4 +99,3 @@ setup _ = do
     putMVar configuration $ ConfigurationInternal HM.empty HM.empty HM.empty
 
 \end{code}
-

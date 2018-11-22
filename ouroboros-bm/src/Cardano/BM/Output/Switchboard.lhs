@@ -15,7 +15,7 @@ import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar)
 --import           Control.Concurrent.STM (atomically)
 --import qualified Control.Concurrent.STM.TBQueue as TBQ
 
-import           Cardano.BM.Data
+import           Cardano.BM.Data (Configuration, NamedLogItem)
 
 import           System.IO.Unsafe (unsafePerformIO)
 
@@ -51,7 +51,7 @@ setup _ = do
     --spawnProc = Async.async qProc
     --qProc = do
     --    nli <- atomically $ TBQ.readTBQueue q
-    --    forM_ 
+    --    forM_
 
 \end{code}
 
@@ -65,4 +65,3 @@ pass item = do
     -- forM_ backends (\backend -> (pass backend) item)
 
 \end{code}
-

@@ -18,8 +18,8 @@ import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text)
 
-import           Cardano.BM.Data
-import           Cardano.BM.Aggregated
+import           Cardano.BM.Data (LogObject (..), LogPrims (..), Configuration, NamedLogItem, LoggerName, LogNamed (..))
+import           Cardano.BM.Aggregated (Aggregated (..), updateAggregation)
 
 import           System.IO.Unsafe (unsafePerformIO)
 

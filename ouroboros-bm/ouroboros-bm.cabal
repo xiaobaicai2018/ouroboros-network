@@ -24,12 +24,13 @@ library
                        Cardano.BM.Data
                        Cardano.BM.Observer.Monadic
                        Cardano.BM.Observer.STM
-                       Cardano.BM.Output.Katip
-                       Cardano.BM.Output.Switchboard
                        Cardano.BM.Output.Aggregation
+                       Cardano.BM.Output.Internal
+                       Cardano.BM.Output.Katip
+                       Cardano.BM.Output.Rotator
+                       Cardano.BM.Output.Switchboard
                        Cardano.BM.Setup
                        Cardano.BM.Trace
-                       Cardano.BM.TraceConfig
   other-modules:
   default-language:    Haskell2010
   default-extensions:  OverloadedStrings
@@ -42,10 +43,12 @@ library
                        clock,
                        containers,
                        contravariant,
+                       directory,
                        filepath,
                        katip,
                        lens,
                        mtl,
+                       safe-exceptions,
                        stm,
                        template-haskell,
                        text,

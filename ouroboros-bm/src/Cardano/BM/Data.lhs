@@ -31,6 +31,8 @@ module Cardano.BM.Data
   , CounterState (..)
   , Configuration (..)
   , diffTimeObserved
+  , Backend (..)
+  , ScribeKind (..)
   )
   where
 
