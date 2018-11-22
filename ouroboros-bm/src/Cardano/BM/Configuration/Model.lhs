@@ -61,15 +61,15 @@ getBackends name =
 defaultBackends :: IO [Backend]
 defaultBackends = do
     -- read configuration?
-    return [ Backend {pass = Cardano.BM.Output.Katip.pass (pack (show StdoutSK  ))}
-           , Backend {pass = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
-           , Backend {pass = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
+    return [ Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show StdoutSK  ))}
+           , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
+           , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
            ]
 
 registerBackend :: Text -> Maybe Backend -> IO ()
-registerBackend kn f = pure ()
-  --  registerBackend "some" (Just Backend { pass = Katip.pass (show StdoutSK) })
-  --  registerBackend "sever.error" (Just Backend { pass = Katip.pass "StdoutSK::severe.log") })
+registerBackend kn f = pure () -- TODO
+  --  registerBackend "some" (Just Backend { pass' = Katip.pass (show StdoutSK) })
+  --  registerBackend "sever.error" (Just Backend { pass' = Katip.pass "StdoutSK::severe.log") })
 
 \end{code}
 

@@ -16,13 +16,17 @@ module Cardano.BM.Output.Katip
 
 import           Control.AutoUpdate (UpdateSettings (..), defaultUpdateSettings,
                      mkAutoUpdate)
-import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar, modifyMVar_)
+import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, putMVar,
+                     takeMVar, withMVar)
+import           Control.Concurrent.STM
 import           Control.Exception (bracket_)
 import           Control.Exception.Safe (catchIO)
+import           Control.Monad (forM_)
 import           Data.Aeson.Text (encodeToLazyText)
+import           Data.Map.Strict (toList)
 import           Data.String (fromString)
 import qualified Data.Text as T
-import           Data.Text (Text)
+import           Data.Text (Text, isPrefixOf)
 import qualified Data.Text.Lazy as T.Lazy
 import           Data.Text.Lazy.Builder (Builder, fromText, toLazyText)
 import qualified Data.Text.Lazy.IO as TIO
@@ -34,15 +38,17 @@ import           System.IO (BufferMode (LineBuffering), Handle, hClose,
 import           System.Directory (createDirectoryIfMissing)
 import           System.IO.Unsafe (unsafePerformIO)
 
-import           Katip.Core (Item (..), Scribe (..), Severity (..),
-                     Verbosity (..), getThreadIdText, intercalateNs,
-                     renderSeverity, unLogStr, LogItem (..), ScribeSettings (..))
+import           Katip.Core (Item (..), Scribe (..), ScribeHandle (..),
+                     ScribeSettings (..), Severity (..), Verbosity (..),
+                     WorkerMessage (..), getThreadIdText, intercalateNs,
+                     renderSeverity, tryWriteTBQueue, unLogStr, LogItem (..))
 import           Katip.Scribes.Handle (brackets)
 import qualified Katip as K
 
 import qualified Cardano.BM.Data as Data
 import qualified Cardano.BM.Output.Internal as Internal
-import           Cardano.BM.Output.Rotator (RotationParameters (..), cleanupRotator, evalRotator, initializeRotator)
+import           Cardano.BM.Output.Rotator (RotationParameters (..),
+                     cleanupRotator, evalRotator, initializeRotator)
 
 \end{code}
 %endif
@@ -71,22 +77,21 @@ setup cfoKey _ = do
     le0 <- K.initLogEnv
                 (K.Namespace ["cardano-sl"])
                 (fromString $ (T.unpack cfoKey) <> ":" <> showVersion mockVersion)
+    -- request a new time 'getCurrentTime' at most 100 times a second
     timer <- mkAutoUpdate defaultUpdateSettings { updateAction = getCurrentTime, updateFreq = 10000 }
     let le1 = updateEnv le0 timer
     stdoutScribe <- mkStdoutScribe K.V0
-    le <- register [("stdout", stdoutScribe)] le1
+    le <- register [(Data.StdoutSK, "stdout", stdoutScribe)] le1
     _ <- takeMVar katip
-    -- putMVar (getLSI lh) $ LoggingHandlerInternal cfg (Just le) ctx counter
     putMVar katip $ KatipInternal [] le
   where
-    register :: [(T.Text, K.Scribe)] -> K.LogEnv -> IO K.LogEnv
+    register :: [(Data.ScribeKind, T.Text, K.Scribe)] -> K.LogEnv -> IO K.LogEnv
     register [] le = return le
-    register ((name, scribe) : scs) le =
-        register scs =<< K.registerScribe name scribe scribeSettings le
+    register ((kind, name, scribe) : scs) le =
+        register scs =<< K.registerScribe (T.pack(show kind) `T.append` "::" `T.append` name) scribe scribeSettings le
         -- TODO register scribe with type and name
         -- registerScribe ((show kind) ++ "::" ++ name) scribe sets le
     updateEnv :: K.LogEnv -> IO UTCTime -> K.LogEnv
-    -- request a new time 'getCurrentTime' at most 100 times a second
     updateEnv le timer =
         le { K._logEnvTimer = timer, K._logEnvHost = "hostname" }
     mockVersion :: Version
@@ -100,24 +105,18 @@ setup cfoKey _ = do
 
 \begin{code}
 pass :: T.Text -> Data.NamedLogItem -> IO ()
-pass backend item = pure () --do
-    -- k <- takeMVar katip
-    -- putMVar katip $ KatipInternal (kInstance k <> [item]) (kSomething k)
-\end{code}
-
-\begin{spec}
+pass backend item = withMVar katip $ \k ->
     -- TODO go through list of registered scribes
     --      and put into queue of scribe if backend kind matches
     --      compare start of name of scribe to (show backend <> "::")
-    forM_ ((kLogEnv k) ^. KC.logEnvScribes) $
-          \(scName, (KC.ScribeHandle _ shChan)) ->
+    forM_ (toList $ K._logEnvScribes (kLogEnv k)) $
+          \(scName, (ScribeHandle _ shChan)) ->
               -- check start of name to match |ScribeKind|
-              if scName `startsWith` backend
-              then atomically (KC.tryWriteTBQueue shChan (KC.NewItem item))
-              else ()
-    putMVar katip k
+              if scName `isPrefixOf` backend
+              then return False --TODO atomically $ tryWriteTBQueue shChan (NewItem item)
+              else return False
 
-\end{spec}
+\end{code}
 
 \subsubsection{Scribes}
 \begin{code}

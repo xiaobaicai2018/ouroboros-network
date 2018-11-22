@@ -1,6 +1,7 @@
 
 \subsection{Data}
 
+%if False
 \begin{code}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
@@ -53,6 +54,7 @@ import           GHC.Generics (Generic)
 import           Cardano.BM.BaseTrace
 
 \end{code}
+%endif
 
 type aliases and empty types
 \begin{code}
@@ -60,7 +62,6 @@ type NamedLogItem = LogNamed LogObject
 
 data Configuration = Configuration
 
-data Backend = Backend { pass :: NamedLogItem -> IO () }
 
 \end{code}
 
@@ -256,6 +257,16 @@ isMonotonicClockCounter _                        = False
 
 \end{code}
 
+\subsubsection{Backend}\label{code:Backend}
+A backend is referenced through the function |pass'| which accepts
+a \nameref{code:NamedLogItem}.
+
+\begin{code}
+
+data Backend = Backend { pass' :: NamedLogItem -> IO () }
+
+\end{code}
+
 \subsubsection{ScribeKind}\label{code:ScribeKind}
 This identifies katip's scribes by type.
 
@@ -270,7 +281,7 @@ data ScribeKind = FileTextSK
 \end{code}
 
 \subsubsection{BackendKind}\label{code:BackendKind}
-This identifies katip's scribes by type.
+This identifies the backends that can be attached to the \nameref{code:Switchboard}.
 
 \begin{code}
 data BackendKind = AggregationBK

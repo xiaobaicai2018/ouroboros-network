@@ -43,8 +43,13 @@ import           Cardano.BM.Output.Internal (FileDescription (..), prtoutExcepti
 import           System.Directory (createFileLink)
 #endif
 
--- | @'RotationParameters'@ one of the two categories  used in the
---   logging config, specifying the log rotation parameters.
+\end{code}
+%endif
+
+\begin{code}
+
+--  |RotationParameters| one of the two categories used in the
+--  logging config, specifying the log rotation parameters.
 data RotationParameters = RotationParameters
     { _rpLogLimitBytes :: !Word64  -- ^ max size of file in bytes
     , _rpMaxAgeHours   :: !Word    -- ^ hours
