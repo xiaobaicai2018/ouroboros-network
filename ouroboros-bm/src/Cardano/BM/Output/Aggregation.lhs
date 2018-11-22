@@ -1,4 +1,5 @@
 \subsection{Cardano.BM.Output.Aggregation}
+\label{module:Cardano.BM.Output.Aggregation}
 
 %if False
 \begin{code}
@@ -14,8 +15,6 @@ module Cardano.BM.Output.Aggregation
 
 import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
                      withMVar)
---import           Control.Concurrent.STM (atomically)
---import qualified Control.Concurrent.STM.TBQueue as TBQ
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text)
 
@@ -72,6 +71,7 @@ pass item = do
         let name = logname <> "." <> iname
         in
         HM.alter (\m -> updateAggregation value m) name agmap
+    -- TODO for text messages aggregate on delta of timestamps
     pass' _ _ agmap = agmap
 
 \end{code}

@@ -60,6 +60,9 @@ pass :: NamedLogItem -> IO ()
 pass item = do
     sb <- takeMVar switchboard
     putMVar switchboard $ SwitchboardInternal (sbQueue sb <> [item]) (sbBackends sb)
+    -- TODO lookup the list of backends
+    -- data Backend = Backend { pass :: NamedLogItem -> IO () }
+    -- forM_ backends (\backend -> (pass backend) item)
 
 \end{code}
 

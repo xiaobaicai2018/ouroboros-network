@@ -43,8 +43,8 @@ katip = unsafePerformIO $ do
 
 -- Our internal state
 data KatipInternal = KatipInternal
-    { kInstance  :: [NamedLogItem]  -- TODO
-    , kSomething :: [Int]  -- TODO
+    { kInstance  :: [NamedLogItem]  -- TODO keep K.LogEnv
+    , kLogEnv :: K.LogEnv  -- TODO
     }
 
 \end{code}
@@ -57,15 +57,30 @@ setup _ = do
     -- TODO setup katip
     putMVar katip $ KatipInternal [] []
 
+    -- TODO register scribe with type and name
+    --      registerScribe ((show kind) ++ "::" ++ name) scribe sets le
 \end{code}
 
 \begin{code}
-pass :: NamedLogItem -> IO ()
-pass item = do
+pass :: Text -> NamedLogItem -> IO ()
+pass backend item = do
     k <- takeMVar katip
     putMVar katip $ KatipInternal (kInstance k <> [item]) (kSomething k)
-
 \end{code}
+
+\begin{spec}
+    -- TODO go through list of registered scribes
+    --      and put into queue of scribe if backend kind matches
+    --      compare start of name of scribe to (show backend <> "::")
+    forM_ ((kLogEnv k) ^. KC.logEnvScribes) $
+          \(scName, (KC.ScribeHandle _ shChan)) ->
+              -- check start of name to match |ScribeKind|
+              if scName `startsWith` backend
+              then atomically (KC.tryWriteTBQueue shChan (KC.NewItem item))
+              else ()
+    putMVar katip k
+
+\end{spec}
 
 \subsubsection{Scribes}
 \begin{code}

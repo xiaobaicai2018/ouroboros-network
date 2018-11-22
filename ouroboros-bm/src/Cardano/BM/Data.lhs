@@ -58,6 +58,8 @@ type NamedLogItem = LogNamed LogObject
 
 data Configuration = Configuration
 
+data Backend = Backend { pass :: NamedLogItem -> IO () }
+
 \end{code}
 
 \subsubsection{Trace}\label{code:Trace}
@@ -251,3 +253,29 @@ isMonotonicClockCounter (MonotonicClockTime _ _) = True
 isMonotonicClockCounter _                        = False
 
 \end{code}
+
+\subsubsection{ScribeKind}\label{code:ScribeKind}
+This identifies katip's scribes by type.
+
+\begin{code}
+data ScribeKind = FileTextSK
+                | FileJsonSK
+                | StdoutSK
+                | StderrSK
+                | DevNullSK
+                deriving (Eq, Show)
+
+\end{code}
+
+\subsubsection{BackendKind}\label{code:BackendKind}
+This identifies katip's scribes by type.
+
+\begin{code}
+data BackendKind = AggregationBK
+                 | EKGViewBK
+                 | KatipBK
+                 | DevNullBK
+                 deriving (Eq, Show)
+
+\end{code}
+
