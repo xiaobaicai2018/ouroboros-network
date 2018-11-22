@@ -89,9 +89,9 @@ import qualified Cardano.BM.Trace
 \end{code}
 %endif
 
-%include Cardano/BM/Observer.STM.lhs
+%include Cardano/BM/Observer/STM.lhs
 
-%include Cardano/BM/Observer.Monadic.lhs
+%include Cardano/BM/Observer/Monadic.lhs
 
 %include Cardano/BM/BaseTrace.lhs
 
@@ -108,5 +108,9 @@ import qualified Cardano.BM.Trace
 %include Cardano/BM/Data.lhs
 
 %include Cardano/BM/Aggregation.lhs
+
+%include Cardano/BM/Output/Switchboard.lhs
+
+%include Cardano/BM/Output/Katip.lhs
 
 \end{document}

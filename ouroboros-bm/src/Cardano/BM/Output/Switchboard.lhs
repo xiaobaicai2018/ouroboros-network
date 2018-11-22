@@ -24,13 +24,13 @@ import           System.IO.Unsafe (unsafePerformIO)
 
 The switchboard is a singleton.
 \begin{code}
--- | internal access to the switchboard
+-- internal access to the switchboard
 {-# NOINLINE switchboard #-}
 switchboard :: MVar SwitchboardInternal
 switchboard = unsafePerformIO $ do
     newMVar $ error "Switchboard MVar is not initialized."
 
--- | Our internal state
+-- Our internal state
 data SwitchboardInternal = SwitchboardInternal
     { sbQueue    :: [NamedLogItem]  -- TODO
     , sbBackends :: [Int]  -- TODO

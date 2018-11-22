@@ -49,11 +49,9 @@ import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.BaseTrace
 import           Cardano.BM.Data
-import           Cardano.BM.Controller (appendWithDot, checkSeverity, findTraceTransformer, getNamedSeverity, setNamedSeverity)
-import qualified Cardano.BM.Output.Internal as Internal
+import           Cardano.BM.Controller (appendWithDot, checkSeverity,
+                     findTraceTransformer, getNamedSeverity, setNamedSeverity)
 import qualified Cardano.BM.Output.Switchboard as Switchboard
-
-import qualified Katip as K
 
 \end{code}
 %endif
@@ -130,9 +128,11 @@ katipTrace = BaseTrace $ Op $ \lognamed -> do
 
 \end{spec}
 
+Every |Trace| ends in the switchboard which then takes care of
+dispatching the messages to outputs
 \begin{code}
-katipTrace :: TraceNamed IO
-katipTrace = BaseTrace $ Op $ \lognamed -> do
+mainTrace :: TraceNamed IO
+mainTrace = BaseTrace $ Op $ \lognamed -> do
     Switchboard.pass lognamed
 
 \end{code}
