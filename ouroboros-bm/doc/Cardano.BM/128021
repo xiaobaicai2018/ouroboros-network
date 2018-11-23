@@ -72,8 +72,8 @@ ${inlines}
       
     end
 
-    classinstance 128021 "User"
-      type class_ref 129813 // User
+    classinstance 128021 "Setup"
+      type class_ref 128149 // Setup
       attributes
         end
       relations

@@ -2,8 +2,8 @@ format 221
 
 classinstance 128021 class_ref 136981 // Configuration
  name ""  xyz 243 108 2000
-classinstancecanvas 128149 classinstance_ref 128021 // User
-  xyz 115 204 2000
+classinstancecanvas 128149 classinstance_ref 128021 // Setup
+  xyz 104 195 2000
 end
 classinstance 128533 class_ref 144277 // Switchboard
  name ""  xyz 343 193 2000
@@ -19,12 +19,12 @@ linkcanvas 128277
   from ref 128149 z 2001 to ref 128021
 dirscanvas 128405 z 1000 linkcanvas_ref 128277
   
-  forward_label "1 setup()" xyz 174 137 3000
+  forward_label "1 setup()" xyz 174 132 3000
 linkcanvas 128661
   from ref 128149 z 2001 to ref 128533
 dirscanvas 128789 z 1000 linkcanvas_ref 128661
   
-  forward_label "2 setup()" xyz 237 179 3000
+  forward_label "2 setup()" xyz 239 175 3000
 linkcanvas 129301
   from ref 128533 z 2001 to ref 128917
 dirscanvas 129429 z 1000 linkcanvas_ref 129301
