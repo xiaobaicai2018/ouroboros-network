@@ -24,7 +24,7 @@ classcanvas 128789 class_ref 128789 // STMObserver
   classdiagramsettings member_max_width 0 end
   xyz 793.28 176.247 2000
 end
-classcanvas 128917 class_ref 128917 // Aggregator
+classcanvas 128917 class_ref 128917 // Aggregation
   classdiagramsettings member_max_width 0 end
   xyz 379.801 670.038 2000
 end
@@ -48,7 +48,7 @@ classcanvas 129557 class_ref 129557 // Dummy
   classdiagramsettings member_max_width 0 end
   xyz 677.643 293.807 2000
 end
-classcanvas 130837 class_ref 129685 // LogSink
+classcanvas 130837 class_ref 129685 // Katip
   classdiagramsettings member_max_width 0 end
   xyz 230.752 670.038 2000
 end
@@ -78,11 +78,7 @@ classcanvas 133653 class_ref 144149 // NamedLogObject
 end
 classcanvas 133781 class_ref 144277 // Switchboard
   classdiagramsettings member_max_width 0 end
-  xyzwh 183.944 434.181 2000 184 84
-end
-classcanvas 133909 class_ref 144405 // Katip
-  classdiagramsettings member_max_width 0 end
-  xyzwh 466.486 439.593 2000 153 73
+  xyzwh 200.944 436.181 2000 265 97
 end
 classcanvas 134805 class_ref 144533 // Backend
   classdiagramsettings hide_operations no show_members_full_definition yes member_max_width 0 end
@@ -98,7 +94,7 @@ packagecanvas 137237
 end
 packagecanvas 137621 
   package_ref 135061 // Output
-   show_context_mode no color gray  xyzwh 41 391 0 885 421
+   show_context_mode no color gray  xyzwh 41 391 0 885 441
 end
 classcanvas 140565 class_ref 144661 // MessageQueue
   classdiagramsettings member_max_width 0 end
@@ -118,6 +114,10 @@ end
 classcanvas 143125 class_ref 157717 // NamedLogItem
   classdiagramsettings member_max_width 0 end
   xyz 65 326 2000
+end
+classcanvas 143381 class_ref 164245 // LogRotation
+  classdiagramsettings member_max_width 0 end
+  xyz 185 767 2000
 end
 relationcanvas 129685 relation_ref 128021 // <unidirectional association>
   from ref 128149 z 2001 to ref 128021
@@ -180,17 +180,6 @@ relationcanvas 133397 relation_ref 143765 // <unidirectional association>
   no_role_a no_role_b
   no_multiplicity_a no_multiplicity_b
 end
-relationcanvas 134037 relation_ref 150293 // <unidirectional association>
-  decenter_end 796
-  from ref 128021 z 2001 to ref 133909
-  no_role_a no_role_b
-  no_multiplicity_a no_multiplicity_b
-end
-relationcanvas 134165 relation_ref 150421 // <unidirectional association>
-  from ref 133909 z 2001 to ref 133781
-  role_a_pos 376 457 3000 no_role_b
-  no_multiplicity_a no_multiplicity_b
-end
 relationcanvas 134293 relation_ref 150549 // <unidirectional association>
   decenter_end 530
   from ref 133781 z 2001 to ref 133013
@@ -245,14 +234,14 @@ end
 relationcanvas 136213 relation_ref 151957 // <generalisation>
   geometry VH unfixed
   decenter_begin 767
-  from ref 133781 z 2006 to point 322 574
+  from ref 133781 z 2006 to point 401 574
   line 139029 z 2006 to ref 134805
   no_role_a no_role_b
   no_multiplicity_a no_multiplicity_b
 end
 relationcanvas 141205 relation_ref 152597 // <composition>
   geometry VHr
-  from ref 133781 z 2007 to point 106 473
+  from ref 133781 z 2007 to point 106 479
   line 141589 z 2007 to ref 140565
   role_a_pos 118 510 3000 no_role_b
   multiplicity_a_pos 90 510 3000 no_multiplicity_b
@@ -272,6 +261,16 @@ end
 relationcanvas 142997 relation_ref 166165 // <unidirectional association>
   decenter_end 838
   from ref 129045 z 2001 to ref 133013
+  no_role_a no_role_b
+  no_multiplicity_a no_multiplicity_b
+end
+relationcanvas 143253 relation_ref 172693 // <unidirectional association>
+  from ref 128021 z 2001 to ref 133781
+  no_role_a no_role_b
+  no_multiplicity_a no_multiplicity_b
+end
+relationcanvas 143509 relation_ref 172821 // <unidirectional association>
+  from ref 130837 z 2001 to ref 143381
   no_role_a no_role_b
   no_multiplicity_a no_multiplicity_b
 end

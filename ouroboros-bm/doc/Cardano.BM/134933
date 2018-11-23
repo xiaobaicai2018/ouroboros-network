@@ -1,6 +1,6 @@
 format 221
 "Observer" // Cardano.BM::Observer
-  revision 2
+  revision 3
   modified_by 21 "axeld"
   // class settings
   
@@ -448,7 +448,16 @@ ${inlines}
 	    idl "  ${comment}${visibility}${type} ${name};
 "
 	    classrelation_ref 150293 // <unidirectional association>
-	  b parent class_ref 144405 // Katip
+	  b parent class_ref 144405 // KatipOFF
+      end
+
+      classrelation 173461 // <unidirectional association>
+	relation 172693 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 173461 // <unidirectional association>
+	  b parent class_ref 144277 // Switchboard
       end
     end
 

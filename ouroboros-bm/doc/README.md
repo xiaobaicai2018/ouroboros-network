@@ -16,6 +16,9 @@ License: "free of use", no license.
 
 ![Components](Components.png)
 
+## Activity
+
+![Activity](Activity.png)
 
 ## STM observer
 

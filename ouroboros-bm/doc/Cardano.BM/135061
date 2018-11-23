@@ -1,6 +1,6 @@
 format 221
 "Output" // Cardano.BM::Output
-  revision 4
+  revision 5
   modified_by 21 "axeld"
   // class settings
   
@@ -50,7 +50,7 @@ format 221
     
     activitydiagramsettings
      end
-    class 144405 "Katip"
+    class 144405 "KatipOFF"
       visibility package 
       cpp_decl ""
       java_decl ""
@@ -81,7 +81,7 @@ ${members}};
       end
     end
 
-    class 129685 "LogSink"
+    class 129685 "Katip"
       visibility package stereotype "Backend"
       cpp_decl "${comment}${template}class ${name}${inherit} {
 ${members}};
@@ -94,12 +94,22 @@ ${inlines}
       explicit_switch_type ""
       mysql_decl ""
       
+      comment "file based backends pass through katip"
       classrelation 151189 // <generalisation>
 	relation 151189 ---|>
 	  a public
 	    idl "${type}"
 	    classrelation_ref 151189 // <generalisation>
 	  b parent class_ref 144533 // Backend
+      end
+
+      classrelation 173589 // <unidirectional association>
+	relation 172821 --->
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 173589 // <unidirectional association>
+	  b parent class_ref 164245 // LogRotation
       end
     end
 
@@ -178,7 +188,7 @@ ${inlines}
       end
     end
 
-    class 128917 "Aggregator"
+    class 128917 "Aggregation"
       visibility package stereotype "Backend"
       cpp_decl "${comment}${template}class ${name}${inherit} {
 ${members}};
@@ -295,7 +305,7 @@ ${members}};
 	    idl "  ${comment}${visibility}${type} ${name};
 "
 	    classrelation_ref 150677 // <unidirectional association>
-	  b parent class_ref 129685 // LogSink
+	  b parent class_ref 129685 // Katip
       end
 
       classrelation 150805 // <unidirectional association>
@@ -313,14 +323,14 @@ ${members}};
 	    idl "  ${comment}${visibility}${type} ${name};
 "
 	    classrelation_ref 150933 // <unidirectional association>
-	  b parent class_ref 128917 // Aggregator
+	  b parent class_ref 128917 // Aggregation
       end
 
       classrelation 151573 // <dependency>
 	relation 151573 -_->
 	  a public
 	    classrelation_ref 151573 // <dependency>
-	  b parent class_ref 128917 // Aggregator
+	  b parent class_ref 128917 // Aggregation
       end
 
       classrelation 151701 // <dependency>
@@ -334,7 +344,7 @@ ${members}};
 	relation 151829 -_->
 	  a public
 	    classrelation_ref 151829 // <dependency>
-	  b parent class_ref 129685 // LogSink
+	  b parent class_ref 129685 // Katip
       end
 
       classrelation 151957 // <generalisation>
@@ -403,6 +413,20 @@ ${members}};
 	  external 
 	end
       end
+    end
+
+    class 164245 "LogRotation"
+      visibility package 
+      cpp_decl ""
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl "${comment}${abstract}${custom}valuetype ${name}${inherit} {
+${members}};
+"
+      explicit_switch_type ""
+      mysql_decl ""
+      
     end
   end
 end

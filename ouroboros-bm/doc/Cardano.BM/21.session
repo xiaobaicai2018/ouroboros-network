@@ -1,18 +1,21 @@
-window_sizes 1765 1307 337 1422 1191 64
+window_sizes 1433 855 337 1090 739 64
 cleanlooks_style
 diagrams
   componentdiagram_ref 142101 // Component View
     1137 952 100 A4 0 0
-  classdiagram_ref 128021 // Overview_Classes
-    1137 952 100 A4-Landscape 0 0
-  active  componentdiagram_ref 135445 // NodeShell
+  componentdiagram_ref 135445 // NodeShell
     864 523 100 A4 0 0
+  active  activitydiagram_ref 155157 // Concurrency
+    898 671 100 A4 173 0
 end
 show_stereotypes
-selected 
-  package_ref 141717 // Cardano.Shell
+selected activityobject_ref 128277 // activity object incoming
 open
-  classview_ref 128021 // Overview
+  activity_ref 128021 // Concurrent_Trace
+  activity_ref 128149 // logging
+  activity_ref 128277 // observe STM
+  activitynode_ref 128661 // fork
+  activitynode_ref 128789 // decision
   
   package_ref 134933 // Observer
   classview_ref 128149 // Configuration
@@ -21,7 +24,7 @@ open
   classview_ref 134933 // TeeTrace
   component_ref 128277 // LoggingSetup
   component_ref 128149 // LoggingConfiguration
+  class_ref 129685 // Katip
   class_ref 137493 // CardanoFeature
-  componentview_ref 128021 // Node-Shell
 end
 end
