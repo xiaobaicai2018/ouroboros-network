@@ -7,46 +7,46 @@ end
 activityactioncanvas 128149 activityaction_ref 128021 // activity action Trace
   
   show_opaque_action_definition default
-  xyzwh 236 75 2005 80 41
+  xyzwh 110 76 2005 81 41
 end
 activitynodecanvas 128277 activitynode_ref 128021 // initial_node
   xyz 24 85 2005
 end
 activitynodecanvas 128405 activitynode_ref 128149 // activity_final
-  xyz 110 239 2005
+  xyz 227 231 2005
 end
 activityactioncanvas 128661 activityaction_ref 128149 // activity action Trace'
   
   show_opaque_action_definition default
-  xyzwh 84 159 2005 79 41
+  xyzwh 228 154 2005 79 41
 end
 activityobjectcanvas 128917 activityobject_ref 128021 // activity object LogObject
   
-  xyzwh 106 80 2005 81 31
+  xyzwh 225 82 2005 81 31
 end
 activitycanvas 129429 activity_ref 128277 // observe STM
   
-  xyzwh 379 27 2000 387 251
+  xyzwh 359 16 2000 391 261
 end
 activitynodecanvas 129557 activitynode_ref 128277 // initial_node
-  xyz 707 88 2005
+  xyz 691 87 2005
 end
 activitynodecanvas 129685 activitynode_ref 128405 // activity_final
-  xyz 434 219 2005
+  xyz 390 222 2005
 end
 activityactioncanvas 129813 activityaction_ref 128277 // activity action STM action
   
   show_opaque_action_definition default
-  xyzwh 555 75 2005 91 45
+  xyzwh 539 74 2005 91 45
 end
 activityactioncanvas 129941 activityaction_ref 128405 // activity action Trace
   
   show_opaque_action_definition default
-  xyzwh 424 145 2005 91 45
+  xyzwh 408 144 2005 91 45
 end
 activityobjectcanvas 130069 activityobject_ref 128149 // activity object LogObject
   
-  xyzwh 428 84 2005 81 31
+  xyzwh 412 83 2005 81 31
 end
 activitycanvas 130837 activity_ref 128405 // Processing
   
@@ -59,7 +59,7 @@ activityactioncanvas 131221 activityaction_ref 128661 // activity action Dispatc
   
   show_opaque_action_definition default
   color lightmediumgreen
-  xyzwh 340 367 2005 100 60
+  xyzwh 339 366 2005 101 61
 end
 activitynodecanvas 131349 activitynode_ref 128661 // fork
    xyzwh 443 315 2005 15 43
@@ -126,39 +126,48 @@ end
 activityactioncanvas 137749 activityaction_ref 129301 // activity action StdoutBE
   
   show_opaque_action_definition default
-  xyzwh 425 720 2005 101 40
+  xyzwh 425 719 2005 101 41
 end
 activityactioncanvas 137877 activityaction_ref 129429 // activity action FileTextBE
   
   show_opaque_action_definition default
-  xyzwh 327 773 2005 101 40
+  xyzwh 327 772 2005 101 41
 end
 activityactioncanvas 138005 activityaction_ref 129557 // activity action FileJsonBE
   
   show_opaque_action_definition default
-  xyzwh 176 761 2005 101 40
+  xyzwh 176 760 2005 101 41
 end
-activityobjectcanvas 139413 activityobject_ref 128661 // activity object NamedLogItem
+activityobjectcanvas 139413 activityobject_ref 128661 // activity object LogObject
   
-  xyzwh 579 156 2011 113 31
+  xyzwh 533 152 2011 81 31
 end
 activityactioncanvas 140053 activityaction_ref 129685 // activity action Trace'
   
   show_opaque_action_definition default
-  xyzwh 519 211 2005 91 42
+  xyzwh 640 149 2005 91 43
 end
 activityobjectcanvas 140821 activityobject_ref 128789 // activity object NamedLogItem
   
-  xyzwh 218 164 2010 113 31
+  xyzwh 48 159 2010 113 31
 end
-flowcanvas 129301 flow_ref 128405 // pass
+activityactioncanvas 142229 activityaction_ref 136213 // activity action Switchboard
   
-  from ref 128661 z 2006 label "pass" xyz 130 212 3000 to ref 128405
-   write_horizontally default
+  show_opaque_action_definition default
+  xyzwh 58 223 2005 95 41
+end
+activityactioncanvas 142741 activityaction_ref 136341 // activity action Switchboard
+  
+  show_opaque_action_definition default
+  xyzwh 462 214 2005 100 40
+end
+activityobjectcanvas 142997 activityobject_ref 135317 // activity object NamedLogItem
+  
+  xyzwh 633 216 2005 113 31
 end
 flowcanvas 130197 flow_ref 128533 // observeIO
   
-  from ref 129557 z 2006 label "observeIO" xyz 654 72 3000 to ref 129813
+  from ref 129557 z 2006 label "observeIO" xyz 638 71 2006 to ref 129813
    write_horizontally default
 end
 flowcanvas 130325 flow_ref 128661 // <flow>
@@ -183,7 +192,7 @@ flowcanvas 135573 flow_ref 131093 // <flow>
 end
 flowcanvas 135701 flow_ref 131221 // pass'
   
-  from ref 132245 z 2006 label "pass'" xyz 577.5 390.5 3000 to ref 135445
+  from ref 132245 z 2006 label "pass'" xyz 577 390 2006 to ref 135445
    write_horizontally default
 end
 flowcanvas 135829 flow_ref 131349 // <flow>
@@ -194,18 +203,18 @@ end
 flowcanvas 136725 flow_ref 131989 // pass'
   geometry HV
   
-  from ref 131477 z 2006 label "pass'" xyz 454.5 480 3000 to point 568 498
+  from ref 131477 z 2006 label "pass'" xyz 454 480 2006 to point 568 498
   line 141589 z 2006 to ref 132245
    write_horizontally default
 end
 flowcanvas 136853 flow_ref 132117 // pass'
   
-  from ref 131477 z 2006 label "pass'" xyz 506 563.5 3000 to ref 132117
+  from ref 131477 z 2006 label "pass'" xyz 506 563 2006 to ref 132117
    write_horizontally default
 end
 flowcanvas 136981 flow_ref 132245 // pass'
   
-  from ref 131477 z 2006 label "pass'" xyz 317.5 505.5 3000 to ref 136597
+  from ref 131477 z 2006 label "pass'" xyz 317 505 2006 to ref 136597
    write_horizontally default
 end
 flowcanvas 137237 flow_ref 132373 // <flow>
@@ -250,35 +259,54 @@ flowcanvas 139541 flow_ref 133269 // <flow>
   from ref 129941 z 2012 to ref 139413
    write_horizontally default
 end
-flowcanvas 140181 flow_ref 133397 // <flow>
+flowcanvas 141717 flow_ref 140565 // logInfo
   
-  from ref 139413 z 2012 to point 632 226
-  line 140309 z 2012 to ref 140053
+  from ref 128277 z 2006 label "logInfo" xyz 52 76 3000 to ref 128149
    write_horizontally default
 end
-flowcanvas 140437 flow_ref 133525 // pass
+flowcanvas 141845 flow_ref 140693 // <flow>
   
-  from ref 140053 z 2006 label "pass" xyz 473 212 3000 to ref 129685
+  from ref 128149 z 2006 to ref 128917
    write_horizontally default
 end
-flowcanvas 140565 flow_ref 133653 // logInfo
+flowcanvas 141973 flow_ref 140821 // <flow>
   
-  from ref 128277 z 2006 label "logInfo" xyz 52 70 3000 to ref 128917
+  from ref 128917 z 2006 to ref 128661
    write_horizontally default
 end
-flowcanvas 140693 flow_ref 133781 // <flow>
+flowcanvas 142101 flow_ref 140949 // <flow>
   
-  from ref 128917 z 2006 to ref 128149
+  from ref 128661 z 2011 to ref 140821
    write_horizontally default
 end
-flowcanvas 140949 flow_ref 133909 // <flow>
+flowcanvas 142357 flow_ref 141077 // pass
   
-  from ref 128149 z 2011 to ref 140821
+  from ref 140821 z 2011 label "pass" xyz 89 199 3000 to ref 142229
    write_horizontally default
 end
-flowcanvas 141077 flow_ref 134037 // <flow>
+flowcanvas 142485 flow_ref 141205 // <flow>
   
-  from ref 140821 z 2011 to ref 128661
+  from ref 142229 z 2006 to ref 128405
+   write_horizontally default
+end
+flowcanvas 142869 flow_ref 141333 // <flow>
+  
+  from ref 139413 z 2012 to ref 140053
+   write_horizontally default
+end
+flowcanvas 143125 flow_ref 141461 // <flow>
+  
+  from ref 140053 z 2006 to ref 142997
+   write_horizontally default
+end
+flowcanvas 143253 flow_ref 141589 // pass
+  
+  from ref 142997 z 2006 label "pass" xyz 582 215 3000 to ref 142741
+   write_horizontally default
+end
+flowcanvas 143381 flow_ref 141717 // <flow>
+  
+  from ref 142741 z 2006 to ref 129685
    write_horizontally default
 end
 end

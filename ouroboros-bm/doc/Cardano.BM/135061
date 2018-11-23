@@ -1,6 +1,6 @@
 format 221
 "Output" // Cardano.BM::Output
-  revision 5
+  revision 6
   modified_by 21 "axeld"
   // class settings
   

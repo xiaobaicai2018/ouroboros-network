@@ -1,6 +1,6 @@
 format 221
 "Observer" // Cardano.BM::Observer
-  revision 3
+  revision 4
   modified_by 21 "axeld"
   // class settings
   
@@ -440,15 +440,6 @@ ${inlines}
 	
 	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
 "
-      end
-
-      classrelation 150293 // <unidirectional association>
-	relation 150293 --->
-	  a role_name "" private
-	    idl "  ${comment}${visibility}${type} ${name};
-"
-	    classrelation_ref 150293 // <unidirectional association>
-	  b parent class_ref 144405 // KatipOFF
       end
 
       classrelation 173461 // <unidirectional association>
