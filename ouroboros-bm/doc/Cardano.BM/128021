@@ -81,60 +81,11 @@ ${inlines}
     end
 
     activity 128021 "Concurrent_Trace"
-      activitydiagram 155157 "Concurrency"
+      activitydiagram 155157 "Activity"
+	stereotype "Diagram"
 	activitydiagramsettings draw_all_relations no
 	 end
 	size A4
-      end
-    end
-
-    activity 128149 "logging"
-      specification operation_ref 129301 // logInfo
-      activityaction 128021 "Trace"
-	opaque_action
-	flow 140693 "<flow>"
-	  on activityobject_ref 128021 // activity object LogObject
-	end
-      end
-
-      activitynode 128021 initial_node ""
-	flow 140565 "logInfo"
-	  on activityaction_ref 128021 // activity action Trace
-	end
-      end
-
-      activitynode 128149 activity_final ""
-	stereotype "Switchboard"
-      end
-
-      activityaction 128149 "Trace'"
-	opaque_action
-	flow 140949 "<flow>"
-	  on activityobject_ref 128789 // activity object NamedLogItem
-	end
-      end
-
-      activityobject 128021 "LogObject"
-	 explicit_type ""
-	unordered 
-	flow 140821 "<flow>"
-	  on activityaction_ref 128149 // activity action Trace'
-	end
-      end
-
-      activityobject 128789 "NamedLogItem"
-	 explicit_type ""
-	unordered 
-	flow 141077 "pass"
-	  on activityaction_ref 136213 // activity action Switchboard
-	end
-      end
-
-      activityaction 136213 "Switchboard"
-	opaque_action
-	flow 141205 "<flow>"
-	  on activitynode_ref 128149 // activity_final
-	end
       end
     end
 
@@ -147,7 +98,7 @@ ${inlines}
       end
 
       activitynode 128405 activity_final ""
-	stereotype "Switchboard"
+	stereotype "NamedLogItem"
       end
 
       activityaction 128277 "STM action"
@@ -207,6 +158,56 @@ ${inlines}
 	unordered 
 	flow 141589 "pass"
 	  on activityaction_ref 136341 // activity action Switchboard
+	end
+      end
+    end
+
+    activity 128149 "logging"
+      specification operation_ref 129301 // logInfo
+      activityaction 128021 "Trace"
+	opaque_action
+	flow 140693 "<flow>"
+	  on activityobject_ref 128021 // activity object LogObject
+	end
+      end
+
+      activitynode 128021 initial_node ""
+	flow 140565 "logInfo"
+	  on activityaction_ref 128021 // activity action Trace
+	end
+      end
+
+      activitynode 128149 activity_final ""
+	stereotype "NamedLogItem"
+      end
+
+      activityaction 128149 "Trace'"
+	opaque_action
+	flow 140949 "<flow>"
+	  on activityobject_ref 128789 // activity object NamedLogItem
+	end
+      end
+
+      activityobject 128021 "LogObject"
+	 explicit_type ""
+	unordered 
+	flow 140821 "<flow>"
+	  on activityaction_ref 128149 // activity action Trace'
+	end
+      end
+
+      activityobject 128789 "NamedLogItem"
+	 explicit_type ""
+	unordered 
+	flow 141077 "pass"
+	  on activityaction_ref 136213 // activity action Switchboard
+	end
+      end
+
+      activityaction 136213 "Switchboard"
+	opaque_action
+	flow 141205 "<flow>"
+	  on activitynode_ref 128149 // activity_final
 	end
       end
     end
@@ -347,6 +348,12 @@ ${inlines}
 	opaque_action
       end
     end
+
+    collaborationdiagram 161685 "Setup_Procedure"
+      stereotype "Diagram"
+      collaborationdiagramsettings end
+      size A4
+    end
   end
 
   package_ref 134933 // Observer
@@ -411,6 +418,7 @@ ${inlines}
     activitydiagramsettings
      end
     collaborationdiagram 128277 "Counters_readCounters"
+      stereotype "Diagram"
       collaborationdiagramsettings end
       size A4
     end
@@ -439,6 +447,7 @@ ${inlines}
     end
 
     sequencediagram 135189 "Counters_readCounters_seq"
+      stereotype "Diagram"
       sequencediagramsettings end
       overlapping_bars size A4
     end
@@ -493,6 +502,7 @@ ${inlines}
     componentdiagramsettings
      end
     componentdiagram 142101 "Component View"
+      stereotype "Diagram"
       componentdiagramsettings draw_all_relations no
        end
       size A4

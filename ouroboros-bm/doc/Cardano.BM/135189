@@ -1,6 +1,6 @@
 format 221
 "Data" // Cardano.BM::Data
-  revision 4
+  revision 5
   modified_by 21 "axeld"
   // class settings
   
@@ -217,6 +217,17 @@ ${members}};
       end
 
       operation 151317 "getSeverityFilter"
+	public explicit_return_type ""
+	nparams 0
+	
+	
+	
+	
+	idl_decl "  ${comment}${oneway}${type} ${name}${(}${)}${raisesnl}${raises};
+"
+      end
+
+      operation 157845 "setup"
 	public explicit_return_type ""
 	nparams 0
 	

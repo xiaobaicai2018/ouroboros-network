@@ -36,6 +36,10 @@ License: "free of use", no license.
 ![Application of Severity Filter](Trace_SeverityFilter.png)
 
 
+## Setup procedure
+
+![Setup procedure](SetupProcedure.png)
+
 ## Backend state machine
 
 ![Backend state machine](Backend_STM.png)

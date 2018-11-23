@@ -50,34 +50,34 @@ activityobjectcanvas 130069 activityobject_ref 128149 // activity object LogObje
 end
 activitycanvas 130837 activity_ref 128405 // Processing
   
-  xyzwh 10 292 2000 715 547
+  xyzwh 9 292 2000 715 547
 end
 activitynodecanvas 130965 activitynode_ref 128533 // initial_node
-  xyz 679 320 2005
+  xyz 679 324 2005
 end
 activityactioncanvas 131221 activityaction_ref 128661 // activity action Dispatch
   
   show_opaque_action_definition default
   color lightmediumgreen
-  xyzwh 339 366 2005 101 61
+  xyzwh 290 366 2005 149 82
 end
 activitynodecanvas 131349 activitynode_ref 128661 // fork
-   xyzwh 443 315 2005 15 43
+   xyzwh 442 315 2005 15 43
 end
 activitynodecanvas 131477 activitynode_ref 128789 // decision
-  xyz 376 483 2005
+  xyz 359 481 2005
 end
 activityactioncanvas 132117 activityaction_ref 128917 // activity action EKGView
   
   show_opaque_action_definition default
   color verylightorange
-  xyzwh 529 607 2005 91 43
+  xyzwh 499 614 2005 91 43
   pins
     pincanvas 139029 pin_ref 128277 // 
-      xyzwh 519 613 2007 11 11 label_xy 478 604
+      xyzwh 489 620 2007 11 11 label_xy 448 611
     end
     pincanvas 139157 pin_ref 128405 // nli
-      xyzwh 519 630 2007 11 11 label_xy 494 621
+      xyzwh 489 637 2007 11 11 label_xy 464 628
     end
   end
 end
@@ -85,13 +85,13 @@ activityactioncanvas 132245 activityaction_ref 129045 // activity action Aggrega
   
   show_opaque_action_definition default
   color verylightorange
-  xyzwh 521 425 2005 99 41
+  xyzwh 520 425 2005 99 41
   pins
     pincanvas 138773 pin_ref 128021 // 
-      xyzwh 511 431 2007 11 11 label_xy 470 422
+      xyzwh 510 431 2007 11 11 label_xy 469 422
     end
     pincanvas 138901 pin_ref 128149 // nli
-      xyzwh 511 448 2007 11 11 label_xy 486 439
+      xyzwh 510 448 2007 11 11 label_xy 485 439
     end
   end
 end
@@ -99,44 +99,44 @@ activityactioncanvas 132885 activityaction_ref 129173 // activity action Katip
   
   show_opaque_action_definition default
   color verylightorange
-  xyzwh 271 620 2005 101 41
+  xyzwh 241 627 2005 101 41
   pins
     pincanvas 141333 pin_ref 128533 // 
-      xyzwh 261 626 2007 11 11 label_xy 220 617
+      xyzwh 231 633 2007 11 11 label_xy 190 624
     end
     pincanvas 141461 pin_ref 128661 // nli
-      xyzwh 261 643 2007 11 11 label_xy 236 634
+      xyzwh 231 650 2007 11 11 label_xy 206 641
     end
   end
 end
 activityobjectcanvas 135445 activityobject_ref 128277 // activity object incoming
   
-  xyzwh 511 312 2005 115 45
+  xyzwh 510 312 2005 115 45
 end
 activityobjectcanvas 136597 activityobject_ref 128533 // activity object katip
   
-  xyzwh 244 534 2005 115 45
+  xyzwh 214 529 2005 115 45
 end
 activitynodecanvas 137109 activitynode_ref 129429 // fork
-   xyzwh 198 577 2010 15 43
+   xyzwh 168 584 2010 15 43
 end
 activitynodecanvas 137621 activitynode_ref 129557 // decision
-  xyz 312 693 2005
+  xyz 282 700 2005
 end
 activityactioncanvas 137749 activityaction_ref 129301 // activity action StdoutBE
   
   show_opaque_action_definition default
-  xyzwh 425 719 2005 101 41
+  xyzwh 395 726 2005 101 41
 end
 activityactioncanvas 137877 activityaction_ref 129429 // activity action FileTextBE
   
   show_opaque_action_definition default
-  xyzwh 327 772 2005 101 41
+  xyzwh 297 779 2005 101 41
 end
 activityactioncanvas 138005 activityaction_ref 129557 // activity action FileJsonBE
   
   show_opaque_action_definition default
-  xyzwh 176 760 2005 101 41
+  xyzwh 146 767 2005 101 41
 end
 activityobjectcanvas 139413 activityobject_ref 128661 // activity object LogObject
   
@@ -192,7 +192,7 @@ flowcanvas 135573 flow_ref 131093 // <flow>
 end
 flowcanvas 135701 flow_ref 131221 // pass'
   
-  from ref 132245 z 2006 label "pass'" xyz 577 390 2006 to ref 135445
+  from ref 132245 z 2006 label "pass'" xyz 576 390 2006 to ref 135445
    write_horizontally default
 end
 flowcanvas 135829 flow_ref 131349 // <flow>
@@ -202,19 +202,20 @@ flowcanvas 135829 flow_ref 131349 // <flow>
 end
 flowcanvas 136725 flow_ref 131989 // pass'
   geometry HV
+  decenter_begin 567
   
-  from ref 131477 z 2006 label "pass'" xyz 454 480 2006 to point 568 498
+  from ref 131477 z 2006 label "pass'" xyz 416 488 2006 to point 567 499
   line 141589 z 2006 to ref 132245
    write_horizontally default
 end
 flowcanvas 136853 flow_ref 132117 // pass'
   
-  from ref 131477 z 2006 label "pass'" xyz 506 563 2006 to ref 132117
+  from ref 131477 z 2006 label "pass'" xyz 466.5 568.5 2006 to ref 132117
    write_horizontally default
 end
 flowcanvas 136981 flow_ref 132245 // pass'
   
-  from ref 131477 z 2006 label "pass'" xyz 317 505 2006 to ref 136597
+  from ref 131477 z 2006 label "pass'" xyz 279 505 2006 to ref 136597
    write_horizontally default
 end
 flowcanvas 137237 flow_ref 132373 // <flow>
