@@ -1,7 +1,7 @@
 \subsection{Cardano.BM.Output.Rotator}
 
 %if False
-\begin{code}
+\begin{spec}
 
 {-# LANGUAGE CPP             #-}
 {-# LANGUAGE DeriveGeneric   #-}
@@ -42,11 +42,6 @@ import           Cardano.BM.Output.Internal (FileDescription (..), prtoutExcepti
 #ifdef POSIX
 import           System.Directory (createFileLink)
 #endif
-
-\end{code}
-%endif
-
-\begin{code}
 
 --  |RotationParameters| one of the two categories used in the
 --  logging config, specifying the log rotation parameters.
@@ -181,4 +176,49 @@ cleanupRotator rotation fdesc = do
         removeFile filepath   -- destructive
         removeFiles fps
 
-\end{code}
+code from Katip.lhs
+
+-- | create a katip scribe for logging to a file
+--   and handle file rotation within the katip-invoked logging function
+mkFileScribe
+    :: RotationParameters
+    -> Internal.FileDescription
+    -> (forall a . LogItem a => Handle -> Bool -> Verbosity -> Item a -> IO Int)  -- format and output function, returns written bytes
+    -> Bool  -- whether the output is colourized
+    -> Data.Severity
+    -> Verbosity
+    -> IO Scribe
+mkFileScribe rot fdesc formatter colorize _ v = do
+    let prefixDir = Internal.prefixPath fdesc
+    (createDirectoryIfMissing True prefixDir)
+        `catchIO` (Internal.prtoutException ("cannot log prefix directory: " ++ prefixDir))
+    trp <- initializeRotator rot fdesc
+    scribestate <- newMVar trp    -- triple of (handle), (bytes remaining), (rotate time)
+    -- sporadically remove old log files - every 10 seconds
+    cleanup <- mkAutoUpdate defaultUpdateSettings { updateAction = cleanupRotator rot fdesc, updateFreq = 10000000 }
+    let finalizer :: IO ()
+        finalizer = do
+            modifyMVar_ scribestate $ \(hdl, b, t) -> do
+                hClose hdl
+                return (hdl, b, t)
+    let logger :: forall a. LogItem a => Item a -> IO ()
+        logger item =
+        --   when (checkItem s sevfilter item) $
+              modifyMVar_ scribestate $ \(hdl, bytes, rottime) -> do
+                  byteswritten <- formatter hdl colorize v item
+                  -- remove old files
+                  cleanup
+                  -- detect log file rotation
+                  let bytes' = bytes - (toInteger $ byteswritten)
+                  let tdiff' = round $ diffUTCTime rottime (_itemTime item)
+                  if bytes' < 0 || tdiff' < (0 :: Integer)
+                     then do   -- log file rotation
+                        hClose hdl
+                        (hdl2, bytes2, rottime2) <- evalRotator rot fdesc
+                        return (hdl2, bytes2, rottime2)
+                     else
+                        return (hdl, bytes', rottime)
+
+    return $ Scribe logger finalizer
+
+\end{spec}

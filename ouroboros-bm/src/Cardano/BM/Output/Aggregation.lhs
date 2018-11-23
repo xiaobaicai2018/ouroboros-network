@@ -17,12 +17,11 @@ import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
                      withMVar)
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text)
-
-import           Cardano.BM.Data (LogObject (..), LogPrims (..), Configuration, NamedLogItem, LoggerName, LogNamed (..))
-import           Cardano.BM.Aggregated (Aggregated (..), updateAggregation)
-
 import           System.IO.Unsafe (unsafePerformIO)
 
+import           Cardano.BM.Aggregated (Aggregated (..), updateAggregation)
+import           Cardano.BM.Data (Configuration, LogNamed (..), LogObject (..),
+                     LogPrims (..), LoggerName, NamedLogItem)
 \end{code}
 %endif
 

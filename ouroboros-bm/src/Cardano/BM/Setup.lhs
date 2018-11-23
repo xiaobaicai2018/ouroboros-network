@@ -13,13 +13,13 @@ module Cardano.BM.Setup
 
 import           Control.Concurrent.MVar (newMVar)
 import           Control.Monad.IO.Class (MonadIO, liftIO)
-import Data.Map (singleton)
+import           Data.Map (singleton)
 
 import           Cardano.BM.Data (LoggerName, OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceContext (..),
                      TraceController (..), TraceTransformer)
-import           Cardano.BM.Trace (Trace, natTrace, noTrace,
-                     stdoutTrace, traceInTVarIO, traceNamedInTVarIO, transformTrace)
+import           Cardano.BM.Trace (Trace, natTrace, noTrace, stdoutTrace,
+                     traceInTVarIO, traceNamedInTVarIO, transformTrace)
 \end{code}
 %endif
 

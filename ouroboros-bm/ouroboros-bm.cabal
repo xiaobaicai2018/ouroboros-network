@@ -27,7 +27,6 @@ library
                        Cardano.BM.Output.Aggregation
                        Cardano.BM.Output.Internal
                        Cardano.BM.Output.Katip
-                       Cardano.BM.Output.Rotator
                        Cardano.BM.Output.Switchboard
                        Cardano.BM.Setup
                        Cardano.BM.Trace

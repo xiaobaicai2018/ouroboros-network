@@ -3,9 +3,6 @@
 
 %if False
 \begin{code}
-{- # LANGUAGE DeriveAnyClass    # -}
-{- # LANGUAGE DeriveGeneric     # -}
-{- # LANGUAGE LambdaCase        # -}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RankNTypes        #-}
 
@@ -48,11 +45,10 @@ import           Data.Text.Lazy (toStrict)
 import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.BaseTrace
-import           Cardano.BM.Data
 import           Cardano.BM.Controller (appendWithDot, checkSeverity,
                      findTraceTransformer, getNamedSeverity, setNamedSeverity)
+import           Cardano.BM.Data
 import qualified Cardano.BM.Output.Switchboard as Switchboard
-
 \end{code}
 %endif
 
