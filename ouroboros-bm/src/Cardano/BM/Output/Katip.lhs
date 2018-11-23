@@ -3,6 +3,7 @@
 %if False
 \begin{code}
 {-# LANGUAGE DeriveGeneric     #-}
+{-# LANGUAGE LambdaCase        #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE RecordWildCards   #-}
 {-# LANGUAGE RankNTypes        #-}
@@ -16,14 +17,13 @@ module Cardano.BM.Output.Katip
 
 import           Control.AutoUpdate (UpdateSettings (..), defaultUpdateSettings,
                      mkAutoUpdate)
-import           Control.Concurrent.MVar (MVar, modifyMVar_, newMVar, putMVar,
-                     takeMVar, withMVar)
-import           Control.Concurrent.STM
+import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar, modifyMVar_, withMVar)
 import           Control.Exception (bracket_)
 import           Control.Exception.Safe (catchIO)
 import           Control.Monad (forM_)
+import           Control.Lens ((^.))
 import           Data.Aeson.Text (encodeToLazyText)
-import           Data.Map.Strict (toList)
+import qualified Data.Map as Map
 import           Data.String (fromString)
 import qualified Data.Text as T
 import           Data.Text (Text, isPrefixOf)
@@ -33,17 +33,20 @@ import qualified Data.Text.Lazy.IO as TIO
 import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Time (UTCTime, diffUTCTime, getCurrentTime)
 import           Data.Version (Version (..), showVersion)
+import           GHC.Conc (atomically, myThreadId)
 import           System.IO (BufferMode (LineBuffering), Handle, hClose,
                      hSetBuffering, stderr, stdout)
 import           System.Directory (createDirectoryIfMissing)
 import           System.IO.Unsafe (unsafePerformIO)
 
-import           Katip.Core (Item (..), Scribe (..), ScribeHandle (..),
-                     ScribeSettings (..), Severity (..), Verbosity (..),
-                     WorkerMessage (..), getThreadIdText, intercalateNs,
-                     renderSeverity, tryWriteTBQueue, unLogStr, LogItem (..))
+import           Katip.Core (Item (..), Scribe (..), Severity (..),
+                     Verbosity (..), getThreadIdText, intercalateNs,
+                     renderSeverity, unLogStr, LogItem (..),
+                     ScribeSettings (..), ScribeHandle (..), WorkerMessage (NewItem),
+                     tryWriteTBQueue, mkThreadIdText)
 import           Katip.Scribes.Handle (brackets)
 import qualified Katip as K
+import qualified Katip.Core as KC
 
 import qualified Cardano.BM.Data as Data
 import qualified Cardano.BM.Output.Internal as Internal
@@ -85,27 +88,74 @@ setup cfoKey _ = do
     _ <- takeMVar katip
     putMVar katip $ KatipInternal [] le
   where
-    register :: [(Data.ScribeKind, T.Text, K.Scribe)] -> K.LogEnv -> IO K.LogEnv
-    register [] le = return le
-    register ((kind, name, scribe) : scs) le =
-        register scs =<< K.registerScribe (T.pack(show kind) `T.append` "::" `T.append` name) scribe scribeSettings le
-        -- TODO register scribe with type and name
-        -- registerScribe ((show kind) ++ "::" ++ name) scribe sets le
     updateEnv :: K.LogEnv -> IO UTCTime -> K.LogEnv
     updateEnv le timer =
         le { K._logEnvTimer = timer, K._logEnvHost = "hostname" }
+    register :: [(Data.ScribeKind, T.Text, K.Scribe)] -> K.LogEnv -> IO K.LogEnv
+    register [] le = return le
+    register ((kind, name, scribe) : scs) le =
+        let name' = T.pack (show kind) <> "::" <> name in
+        register scs =<< K.registerScribe name' scribe scribeSettings le
     mockVersion :: Version
     mockVersion = Version [0,1,0,0] []
     scribeSettings :: ScribeSettings
     scribeSettings = ScribeSettings bufferSize
       where
-        bufferSize = 5000   -- size of the queue (in log items)
+        bufferSize = 5000  -- size of the queue (in log items)
 
 \end{code}
 
 \begin{code}
+example :: IO ()
+example = do
+    setup "CFOKEY" Data.Configuration
+    pass (T.pack (show Data.StdoutSK)) $ Data.LogNamed
+                                            { Data.lnName = "test"
+                                            , Data.lnItem = Data.LP $ Data.LogMessage $ Data.LogItem
+                                                { Data.liSelection = Data.Both
+                                                , Data.liSeverity  = Data.Info
+                                                , Data.liPayload   = "Hello!"
+                                                }
+                                            }
+
 pass :: T.Text -> Data.NamedLogItem -> IO ()
-pass backend item = withMVar katip $ \k ->
+pass backend namedLogItem = withMVar katip $ \k -> do
+    -- TODO go through list of registered scribes
+    --      and put into queue of scribe if backend kind matches
+    --      compare start of name of scribe to (show backend <> "::")
+    let env = kLogEnv k
+    forM_ (Map.toList $ K._logEnvScribes env) $
+          \(scName, (ScribeHandle _ shChan)) ->
+              -- check start of name to match |ScribeKind|
+                if backend `T.isPrefixOf` scName
+                then do
+                    let item = Data.lnItem namedLogItem
+                    let (sev, msg, payload) = case item of
+                                (Data.LP (Data.LogMessage logItem)) ->
+                                    (Data.liSeverity logItem, Data.liPayload logItem, item{-()-})
+                                _ ->
+                                    (Data.Info, "", item)
+                    threadIdText <- mkThreadIdText <$> myThreadId
+                    let ns = Data.lnName namedLogItem
+                    itemTime <- env ^. KC.logEnvTimer
+                    let itemKatip = Item {
+                              _itemApp       = env ^. KC.logEnvApp
+                            , _itemEnv       = env ^. KC.logEnvEnv
+                            , _itemSeverity  = sev2klog sev
+                            , _itemThread    = threadIdText
+                            , _itemHost      = env ^. KC.logEnvHost
+                            , _itemProcess   = env ^. KC.logEnvPid
+                            , _itemPayload   = payload
+                            , _itemMessage   = K.logStr msg
+                            , _itemTime      = itemTime
+                            , _itemNamespace = (env ^. KC.logEnvApp) <> (K.Namespace [ns])
+                            , _itemLoc       = Nothing
+                            }
+                    atomically $ tryWriteTBQueue shChan (NewItem itemKatip)
+                else return False
+\end{code}
+
+\begin{spec}
     -- TODO go through list of registered scribes
     --      and put into queue of scribe if backend kind matches
     --      compare start of name of scribe to (show backend <> "::")
@@ -132,20 +182,20 @@ mkFileScribeH h colorize verbosity = do
     locklocal <- newMVar ()
     let logger :: Item a -> IO ()
         logger item = -- when (checkItem sev sevMap item) $ --TODO probably checkItem is redundant
-            bracket_ (takeMVar locklocal) (putMVar locklocal ()) $ pure ()
-                -- case _itemPayload item of
-                --     lognamed@(Data.LogNamed _ _) ->
-                --         case Data.lnItem lognamed of
-                --             Data.LP (Data.LogMessage logItem) ->
-                --                 output (Data.lnName lognamed) $ Data.liPayload logItem
-                --             obj ->
-                --                 output (Data.lnName lognamed) $ T.Lazy.toStrict (encodeToLazyText obj)
-                --     _ -> pure ()
+            output item
+            -- bracket_ (takeMVar locklocal) (putMVar locklocal ()) $
+            --     case _itemPayload item of
+            --         _                            -> pure ()
+            --         (Data.LogNamed name logItem) ->
+            --             case logItem of
+            --                 Data.LP (Data.LogMessage logMsg) ->
+            --                     output (T.Lazy.fromStrict name) (T.Lazy.fromStrict (Data.liPayload logMsg))
+            --                 obj ->
+            --                     output (T.Lazy.fromStrict name) (encodeToLazyText obj)
 
     pure $ Scribe logger (hClose h)
   where
-    output nm msg = TIO.putStrLn $ nm <> " :: " <> msg
-                 -- TIO.hPutStrLn h $! toLazyText $ formatItem colorize verbosity item
+    output item = TIO.hPutStrLn h $! toLazyText $ formatItem colorize verbosity item
 
 -- | create a katip scribe for logging to a file in textual representation
 mkTextFileScribe :: RotationParameters -> Internal.FileDescription -> Bool -> Data.Severity -> Verbosity -> IO Scribe
@@ -169,7 +219,7 @@ mkFileScribe
     -> Data.Severity
     -> Verbosity
     -> IO Scribe
-mkFileScribe rot fdesc formatter colorize s v = do
+mkFileScribe rot fdesc formatter colorize _ v = do
     let prefixDir = Internal.prefixPath fdesc
     (createDirectoryIfMissing True prefixDir)
         `catchIO` (Internal.prtoutException ("cannot log prefix directory: " ++ prefixDir))
@@ -237,5 +287,14 @@ formatItem withColor _verb Item{..} =
     colorize c m
       | withColor = "\ESC["<> c <> "m" <> m <> "\ESC[0m"
       | otherwise = m
+
+-- translate Severity to Katip.Severity
+sev2klog :: Data.Severity -> K.Severity
+sev2klog = \case
+    Data.Debug   -> K.DebugS
+    Data.Info    -> K.InfoS
+    Data.Notice  -> K.NoticeS
+    Data.Warning -> K.WarningS
+    Data.Error   -> K.ErrorS
 
 \end{code}

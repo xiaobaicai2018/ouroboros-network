@@ -48,8 +48,10 @@ import           Data.Text (Text)
 import           Data.Time.Units (Microsecond, toMicroseconds)
 import           Data.Unique (Unique, hashUnique)
 import           Data.Yaml (withText)
-
 import           GHC.Generics (Generic)
+
+import qualified Katip as K
+import qualified Katip.Core as KC
 
 import           Cardano.BM.BaseTrace
 
@@ -91,6 +93,12 @@ data LogObject = LP LogPrims
                | ObserveOpen CounterState
                | ObserveClose CounterState
                  deriving (Generic, Show, ToJSON)
+
+-- useful instances for Katip
+deriving instance K.ToObject LogObject
+instance KC.LogItem LogObject where
+    payloadKeys _ _ = KC.AllKeys
+
 \end{code}
 
 \subsubsection{TraceTransformer}\label{code:TraceTransformer}
