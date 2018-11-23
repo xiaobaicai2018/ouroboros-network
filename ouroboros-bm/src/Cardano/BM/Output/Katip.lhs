@@ -2,11 +2,13 @@
 
 %if False
 \begin{code}
-{-# LANGUAGE DeriveGeneric     #-}
-{-# LANGUAGE LambdaCase        #-}
-{-# LANGUAGE OverloadedStrings #-}
-{-# LANGUAGE RecordWildCards   #-}
-{-# LANGUAGE RankNTypes        #-}
+{-# LANGUAGE DeriveAnyClass     #-}
+{-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE LambdaCase         #-}
+{-# LANGUAGE OverloadedStrings  #-}
+{-# LANGUAGE RecordWildCards    #-}
+{-# LANGUAGE RankNTypes         #-}
+{-# LANGUAGE StandaloneDeriving #-}
 
 module Cardano.BM.Output.Katip
     (
@@ -118,6 +120,11 @@ example = do
                                                 }
                                             }
 
+-- useful instances for Katip
+deriving instance K.ToObject Data.LogObject
+instance KC.LogItem Data.LogObject where
+    payloadKeys _ _ = KC.AllKeys
+
 pass :: T.Text -> Data.NamedLogItem -> IO ()
 pass backend namedLogItem = withMVar katip $ \k -> do
     -- TODO go through list of registered scribes
@@ -166,7 +173,7 @@ pass backend namedLogItem = withMVar katip $ \k -> do
               then return False --TODO atomically $ tryWriteTBQueue shChan (NewItem item)
               else return False
 
-\end{code}
+\end{spec}
 
 \subsubsection{Scribes}
 \begin{code}
