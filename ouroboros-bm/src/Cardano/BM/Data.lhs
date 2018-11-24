@@ -30,7 +30,6 @@ module Cardano.BM.Data
   , Severity (..)
   , Counter (..)
   , CounterState (..)
-  , Configuration (..)
   , diffTimeObserved
   , Backend (..)
   , ScribeKind (..)
@@ -58,9 +57,6 @@ import           Cardano.BM.BaseTrace
 type aliases and empty types
 \begin{code}
 type NamedLogItem = LogNamed LogObject
-
-data Configuration = Configuration
-
 
 \end{code}
 

@@ -7,11 +7,14 @@
 
 module Cardano.BM.Configuration.Model
     (
-      setup
+      Configuration
+    , setup
     , inspectSeverity
     , setSeverity
     , getBackends
     , registerBackend
+    , setDefaultBackends
+    , getOption
     --, inspectOutput
     --, takedown
     ) where
@@ -22,8 +25,7 @@ import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text, pack)
 
-import           Cardano.BM.Data (Configuration, Severity (..), Backend (..), ScribeKind (..))
-import qualified Cardano.BM.Output.Katip as Cardano.BM.Output.Katip
+import           Cardano.BM.Data (Severity (..), Backend (..))
 
 import           System.IO.Unsafe (unsafePerformIO)
 
@@ -43,21 +45,27 @@ data ConfigurationInternal = ConfigurationInternal
     { cgMapSeverity :: HM.HashMap Text Severity
     , cgMapOutput   :: HM.HashMap Text [Backend]
     , cgOptions     :: HM.HashMap Text Aeson.Object
+    , cgMinSeverity :: Severity
+    , cgDefBackends :: [Backend]
     }
 --    options:  config.logrotation = { maxFiles = 10; maxSize = 5000000 }
 --              config.logprefix = { path = "/mnt/disk/spacy" }
 
+type Configuration = MVar ConfigurationInternal
+
+\end{code}
+
+\begin{code}
 getBackends :: Text -> IO (Maybe [Backend])
 getBackends name =
     withMVar configuration $ \cg -> do
         let outs = HM.lookup name (cgMapOutput cg)
         case outs of
-          -- default? stdout
-          Nothing -> do
-              os <- defaultBackends
-              return $ Just os
-          Just os -> return $ Just os
+            Nothing -> do
+                return $ Just (cgDefBackends cg)
+            Just os -> return $ Just os
 
+{-
 defaultBackends :: IO [Backend]
 defaultBackends = do
     -- read configuration?
@@ -65,11 +73,26 @@ defaultBackends = do
            , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
            , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
            ]
+-}
+setDefaultBackends :: [Backend] -> IO ()
+setDefaultBackends bes = do
+    cg <- takeMVar configuration
+    putMVar configuration $ cg { cgDefBackends = bes }
 
 registerBackend :: Text -> Maybe Backend -> IO ()
 registerBackend kn f = pure () -- TODO
   --  registerBackend "some" (Just Backend { pass' = Katip.pass (show StdoutSK) })
-  --  registerBackend "sever.error" (Just Backend { pass' = Katip.pass "StdoutSK::severe.log") })
+  --  registerBackend "severe.error" (Just Backend { pass' = Katip.pass "StdoutSK::severe.log") })
+
+\end{code}
+
+\begin{code}
+getOption :: Configuration -> Text -> IO (Maybe Text)
+getOption mcg name = do
+    withMVar mcg $ \cg ->
+        case HM.lookup name (cgOptions cg) of
+            Nothing -> return Nothing
+            Just o -> return $ Just $ pack $ show o
 
 \end{code}
 
@@ -91,11 +114,10 @@ setSeverity _name _sev = do
 \end{code}
 
 \begin{code}
-setup :: Configuration -> IO ()
+setup :: Text -> IO Configuration
 setup _ = do
     _ <- takeMVar configuration
-    -- TODO create thread which will periodically output
-    --      aggregated values to the switchboard
-    putMVar configuration $ ConfigurationInternal HM.empty HM.empty HM.empty
+    putMVar configuration $ ConfigurationInternal HM.empty HM.empty HM.empty Debug []
+    return configuration
 
 \end{code}

@@ -1,6 +1,7 @@
 
-\subsection{Trace}
+\subsection{Testing aggregation}
 
+%if False
 \begin{code}
 module Cardano.BM.Test.Aggregated (
     tests
@@ -13,6 +14,10 @@ import           Test.Tasty
 import           Test.Tasty.HUnit
 import           Test.Tasty.QuickCheck
 
+\end{code}
+%endif
+
+\begin{code}
 
 tests :: TestTree
 tests = testGroup "aggregation measurements" [

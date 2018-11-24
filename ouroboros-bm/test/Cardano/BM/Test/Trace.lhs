@@ -1,6 +1,7 @@
 
 \subsection{Trace}
 
+%if False
 \begin{code}
 {-# LANGUAGE LambdaCase #-}
 
@@ -13,7 +14,7 @@ import           Prelude hiding (lookup)
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
-import           Control.Concurrent.MVar (withMVar)
+--import           Control.Concurrent.MVar (withMVar)
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Monad (forM, forM_, void)
 import           Data.List (find)
@@ -27,7 +28,7 @@ import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
-                     TraceContext(..), TraceController(..), diffTimeObserved,
+                     TraceContext (..), diffTimeObserved,
                      loggerName)
 import qualified Cardano.BM.Observer.Monadic as MonadicObserver
 import qualified Cardano.BM.Observer.STM as STMObserver
@@ -40,7 +41,7 @@ import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
 import           Test.Tasty.QuickCheck (testProperty)
 
 \end{code}
-
+%endif
 
 \begin{code}
 tests :: TestTree
@@ -88,7 +89,6 @@ prop_Trace_minimal = True
 \end{code}
 
 \begin{code}
--- | example: named context trace
 example_named :: IO String
 example_named = do
     logTrace <- setupTrace $ TraceConfiguration StdOut "test" Neutral Debug
@@ -157,9 +157,8 @@ stress_ObservablevsNo_Trace = do
     observablesSet = fromList [MonotonicClock, MemoryStats]
     -- measure 100 times the reversion of a list
     observeActions trace name = do
-        forM [1..100] $ \_ -> MonadicObserver.bracketObserveIO trace name action
-    action = return $
-      reverse [1..1000]
+        forM [1::Int ..100] $ \_ -> MonadicObserver.bracketObserveIO trace name action
+    action = return $ reverse [1::Int ..1000]
     findObserveClose objects = case find (\case {(ObserveClose _) -> True; _ -> False}) objects of
         Just (ObserveClose state) -> state
         _                         -> error "ObserveClose NOT found."
@@ -252,7 +251,7 @@ unit_hierarchy' (t1: t2: t3 : _) f = do
     logInfo trace2 "Message from level 2."
 
     insertInController trace2 "innest" t3
-    -- (_, trace3) <- transformTrace "innest" trace2
+    -- (\_, trace3) <- transformTrace "innest" trace2
     _ <- STMObserver.bracketObserveIO trace2 "innest" setVar_
     logInfo trace2 "Message from level 3."
     -- acquire the traced objects
@@ -327,8 +326,6 @@ unit_noOpening_Trace = do
     logTrace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" DropOpening Debug
     _ <- STMObserver.bracketObserveIO logTrace "setTVar" setVar_
     res <- STM.readTVarIO msgs
-    -- withMVar (controller ctx) (\tc -> putStrLn (show (traceTransformers tc)))
-    -- |ObserveOpen| should be eliminated from tracing.
     assertBool
         ("Found non-expected ObserveOpen message: " ++ show res)
         (all (\case {ObserveOpen _ -> False; _ -> True}) res)

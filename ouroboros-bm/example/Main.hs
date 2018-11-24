@@ -6,7 +6,7 @@ module Main
 
 import           Control.Concurrent
 import           Control.Exception
-import           Data.Int (Int64 (..))
+import           Data.Int (Int64)
 import           Data.List
 import           Data.Time.Clock.POSIX (getPOSIXTime)
 import qualified System.Metrics.Distribution as Distribution

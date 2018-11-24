@@ -18,7 +18,8 @@ import           Control.Concurrent.STM (STM, atomically)
 import qualified Control.Concurrent.STM.TBQueue as TBQ
 import           Control.Monad (forM_)
 
-import           Cardano.BM.Data (Backend (..), Configuration, NamedLogItem)
+import           Cardano.BM.Configuration (Configuration)
+import           Cardano.BM.Data (Backend (..), NamedLogItem)
 import qualified Cardano.BM.Output.Katip as Katip
 
 import           System.IO.Unsafe (unsafePerformIO)

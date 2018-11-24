@@ -20,7 +20,8 @@ import           Data.Text (Text)
 import           System.IO.Unsafe (unsafePerformIO)
 
 import           Cardano.BM.Aggregated (Aggregated (..), updateAggregation)
-import           Cardano.BM.Data (Configuration, LogNamed (..), LogObject (..),
+import           Cardano.BM.Configuration (Configuration)
+import           Cardano.BM.Data (LogNamed (..), LogObject (..),
                      LogPrims (..), LoggerName, NamedLogItem)
 \end{code}
 %endif
