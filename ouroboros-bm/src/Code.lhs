@@ -90,7 +90,6 @@ import qualified Cardano.BM.Trace
 %endif
 
 %include Cardano/BM/Observer/STM.lhs
-
 %include Cardano/BM/Observer/Monadic.lhs
 
 %include Cardano/BM/BaseTrace.lhs
@@ -100,19 +99,19 @@ import qualified Cardano.BM.Trace
 %include Cardano/BM/Controller.lhs
 
 %include Cardano/BM/Counters.lhs
-
+%include Cardano/BM/Counters/Common.lhs
 %include Cardano/BM/Counters/Dummy.lhs
-
 %include Cardano/BM/Counters/Linux.lhs
 
 %include Cardano/BM/Data.lhs
 
+%include Cardano/BM/Configuration.lhs
+%include Cardano/BM/Configuration/Model.lhs
+
 %include Cardano/BM/Aggregated.lhs
 
 %include Cardano/BM/Output/Switchboard.lhs
-
 %include Cardano/BM/Output/Katip.lhs
-
 %include Cardano/BM/Output/Aggregation.lhs
 
 \end{document}

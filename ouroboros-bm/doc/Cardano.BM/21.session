@@ -5,17 +5,21 @@ diagrams
     1137 952 100 A4 0 0
   componentdiagram_ref 135445 // NodeShell
     864 523 100 A4 0 0
-  active  activitydiagram_ref 155157 // Concurrency
-    898 671 100 A4 173 0
+  activitydiagram_ref 155157 // Activity
+    898 671 100 A4 0 0
+  collaborationdiagram_ref 128277 // Counters_readCounters
+    872 591 100 A4 0 0
+  classdiagram_ref 128021 // Overview_Classes
+    872 591 100 A4-Landscape 0 0
+  active  collaborationdiagram_ref 161685 // Setup_Procedure
+    872 591 100 A4 0 0
+  sequencediagram_ref 135189 // Counters_readCounters_seq
+    872 591 100 A4 0 0
 end
 show_stereotypes
-selected activityobject_ref 128277 // activity object incoming
+selected collaborationdiagram_ref 161685 // Setup_Procedure
 open
   activity_ref 128021 // Concurrent_Trace
-  activity_ref 128149 // logging
-  activity_ref 128277 // observe STM
-  activitynode_ref 128661 // fork
-  activitynode_ref 128789 // decision
   
   package_ref 134933 // Observer
   classview_ref 128149 // Configuration
@@ -25,6 +29,6 @@ open
   component_ref 128277 // LoggingSetup
   component_ref 128149 // LoggingConfiguration
   class_ref 129685 // Katip
-  class_ref 137493 // CardanoFeature
+  classview_ref 141589 // Data Classes
 end
 end
