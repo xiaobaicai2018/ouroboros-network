@@ -14,7 +14,6 @@ import           Prelude hiding (lookup)
 import qualified Control.Concurrent.STM.TVar as STM
 import qualified Control.Monad.STM as STM
 
---import           Control.Concurrent.MVar (withMVar)
 import           Control.Concurrent (forkIO, threadDelay)
 import           Control.Monad (forM, forM_, void)
 import           Data.List (find)
@@ -22,14 +21,16 @@ import           Data.Map (fromListWith, lookup)
 import           Data.Set (fromList)
 import           Data.Text (Text, append, pack)
 import qualified Data.Text as T
+import           Data.Time.Units (Microsecond)
+import           Data.Unique (newUnique)
 
+import           Cardano.BM.Counters (diffTimeObserved, getMonoClock)
 import           Cardano.BM.Controller (insertInController, setMinSeverity, setNamedSeverity)
 import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceTransformer (..),
-                     TraceContext (..), diffTimeObserved,
-                     loggerName)
+                     TraceContext (..), loggerName)
 import qualified Cardano.BM.Observer.Monadic as MonadicObserver
 import qualified Cardano.BM.Observer.STM as STMObserver
 import           Cardano.BM.Setup (setupTrace)
@@ -38,7 +39,7 @@ import           Cardano.BM.Trace (Trace, appendName, logInfo, transformTrace)
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
                      testCaseInfo)
-import           Test.Tasty.QuickCheck (testProperty)
+--import           Test.Tasty.QuickCheck (testProperty)
 
 \end{code}
 %endif
@@ -46,27 +47,31 @@ import           Test.Tasty.QuickCheck (testProperty)
 \begin{code}
 tests :: TestTree
 tests = testGroup "testing Trace" [
-        testProperty "minimal" prop_Trace_minimal
-      , unit_tests
+        unit_tests
       , testCase "forked traces stress testing" stress_trace_in_fork
-      , testCase "stress testing: ObservableTrace vs NoTrace" stress_ObservablevsNo_Trace
-      , testCaseInfo "demonstrating nested named context logging" example_named
+      , testCase "stress testing: ObservableTrace vs. NoTrace" timing_Observable_vs_Untimed
+      , testCaseInfo "demonstrating nested named context logging" example_with_named_contexts
       ]
 
 unit_tests :: TestTree
 unit_tests = testGroup "Unit tests" [
         testCase "opening messages should not be traced" unit_noOpening_Trace
-      , testCase "hierarchy testing" unit_hierarchy
-      , testCase "forked Traces testing" unit_trace_in_fork
-      , testCase "hierarchy testing NoTrace" $
-            unit_hierarchy' [Neutral, NoTrace, (ObservableTrace observablesSet)] onlyLevelOneMessage
-      , testCase "hierarchy testing DropOpening" $
-            unit_hierarchy' [Neutral, DropOpening, (ObservableTrace observablesSet)] notObserveOpen
-      , testCase "hierarchy testing UntimedTrace" $
-            unit_hierarchy' [Neutral, UntimedTrace, (ObservableTrace observablesSet)] observeOpenWithMeasures
-      , testCase "changing minimum severity at runtime" unit_min_severity
-      , testCase "changing trace-specific severity at runtime" unit_severity_change
-      , testCase "appending names should not exceed 50 chars" uint_append_name
+      , testCase "hierarchy of traces" unit_hierarchy
+      , testCase "forked traces" unit_trace_in_fork
+      , testCase "hierarchy of traces with NoTrace" $
+            unit_hierarchy' [Neutral, NoTrace, (ObservableTrace observablesSet)] 
+                onlyLevelOneMessage
+      , testCase "hierarchy of traces with DropOpening" $
+            unit_hierarchy' [Neutral, DropOpening, (ObservableTrace observablesSet)]
+                notObserveOpen
+      , testCase "hierarchy of traces with UntimedTrace" $
+            unit_hierarchy' [Neutral, UntimedTrace, UntimedTrace]
+                observeOpenWithoutMeasures
+      , testCase "changing the minimum severity of a trace at runtime"
+            unit_trace_min_severity
+      , testCase "changing the minimum severity of a named context at runtime" 
+            unit_named_min_severity
+      , testCase "appending names should not exceed 50 chars" unit_append_name
       ]
       where
         observablesSet = fromList [MonotonicClock, MemoryStats]
@@ -76,6 +81,10 @@ unit_tests = testGroup "Unit tests" [
         onlyLevelOneMessage = \case
             [LP (LogMessage (LogItem _ _ "Message from level 1."))] -> True
             _                                                       -> False
+        observeOpenWithoutMeasures :: [LogObject] -> Bool
+        observeOpenWithoutMeasures = any $ \case
+            ObserveOpen (CounterState _ counters) -> counters == []
+            _ -> False
         observeOpenWithMeasures :: [LogObject] -> Bool
         observeOpenWithMeasures = any $ \case
             ObserveOpen (CounterState _ counters) -> not $ null counters
@@ -83,14 +92,10 @@ unit_tests = testGroup "Unit tests" [
 
 \end{code}
 
+\subsubsection{Example of using named contexts with |Trace|}
 \begin{code}
-prop_Trace_minimal :: Bool
-prop_Trace_minimal = True
-\end{code}
-
-\begin{code}
-example_named :: IO String
-example_named = do
+example_with_named_contexts :: IO String
+example_with_named_contexts = do
     logTrace <- setupTrace $ TraceConfiguration StdOut "test" Neutral Debug
     putStrLn "\n"
     logInfo logTrace "entering"
@@ -102,9 +107,9 @@ example_named = do
     logInfo logTrace "done."
     return ""
   where
-    complexWork0 tr msg = logInfo tr ("let's see: " `append` msg)
+    complexWork0 tr msg = logInfo tr ("let's see (0): " `append` msg)
     complexWork1 tr msg = do
-        logInfo tr ("let's see: " `append` msg)
+        logInfo tr ("let's see (1): " `append` msg)
         logTrace' <- appendName "inner-work-1" tr
         let observablesSet = fromList [MonotonicClock, MemoryStats]
         insertInController logTrace' "STM-action" (ObservableTrace observablesSet)
@@ -113,59 +118,65 @@ example_named = do
 
 \end{code}
 
+\subsubsection{Show effect of turning off observables}\label{timing_Observable_vs_Untimed}
 \begin{code}
-stress_ObservablevsNo_Trace :: Assertion
-stress_ObservablevsNo_Trace = do
-    msgs  <- STM.newTVarIO []
-    trace <- setupTrace $ TraceConfiguration
-                                    (TVarList msgs)
-                                    "test"
-                                    (ObservableTrace (fromList [MonotonicClock]))
-                                    Debug
-    msgs'  <- STM.newTVarIO []
-    trace' <- setupTrace $ TraceConfiguration
-                                    (TVarList msgs')
-                                    "test"
+run_timed_action :: Trace IO -> IO (Microsecond)
+run_timed_action logTrace = do
+    runid <- newUnique
+    t0 <- getMonoClock
+    _ <- observeAction logTrace "Observables"
+    t1 <- getMonoClock
+    return $ diffTimeObserved (CounterState runid t0) (CounterState runid t1)
+  where
+    observeAction trace name = do
+        _ <- MonadicObserver.bracketObserveIO trace name action
+        return ()
+    action = return $ forM [1::Int ..100] $ \_ -> reverse [1::Int ..1000]
+
+timing_Observable_vs_Untimed :: Assertion
+timing_Observable_vs_Untimed = do
+    msgs1  <- STM.newTVarIO []
+    trace1 <- setupTrace $ TraceConfiguration
+                                    (TVarList msgs1)
+                                    "observables"
                                     (ObservableTrace observablesSet)
                                     Debug
 
-    insertInController trace' "action" (ObservableTrace observablesSet)
-    _ <- MonadicObserver.bracketObserveIO trace "" $ observeActions trace' "action"
+    msgs2  <- STM.newTVarIO []
+    trace2 <- setupTrace $ TraceConfiguration
+                                    (TVarList msgs2)
+                                    "no timing"
+                                    UntimedTrace
+                                    Debug
 
-    res <- STM.readTVarIO msgs
-    let endState   = findObserveClose res
-        startState = findObserveOpen  res
-        durationObservable = diffTimeObserved startState endState
-    putStr ("durationObservable: " ++ show durationObservable  ++ " ")
+    msgs3  <- STM.newTVarIO []
+    trace3 <- setupTrace $ TraceConfiguration
+                                    (TVarList msgs3)
+                                    "no trace"
+                                    NoTrace
+                                    Debug
 
-    -- measurements will not occur
-    insertInController trace' "action" NoTrace
-    _ <- MonadicObserver.bracketObserveIO trace "" $ observeActions trace' "action"
+    t_observable <- run_timed_action trace1
+    t_untimed    <- run_timed_action trace2
+    t_notrace    <- run_timed_action trace3
 
-    -- acquire the traced objects
-    res' <- STM.readTVarIO msgs
-    let endState'   = findObserveClose res'
-        startState' = findObserveOpen  res'
-        durationNoTrace = diffTimeObserved startState' endState'
-    putStr ("durationNoTrace: " ++ show durationNoTrace ++ " ")
-
-    -- time consumed by NoTrace must be lower than ObservableTrace
-    assertBool
-        ("NoTrace consumed more time than ObservableTrace: " ++ show res')
-        (durationNoTrace < durationObservable)
+    assertBool ("Untimed consumed more time than ObservableTrace " ++ (show [t_untimed, t_observable]))
+        (t_untimed < t_observable)
+    assertBool ("NoTrace consumed more time than ObservableTrace" ++ (show [t_notrace, t_untimed]))
+        (t_notrace < t_observable)
+    assertBool ("NoTrace consumed more time than Untimed" ++ (show [t_notrace, t_observable]))
+        (t_notrace < t_untimed)
   where
     observablesSet = fromList [MonotonicClock, MemoryStats]
-    -- measure 100 times the reversion of a list
-    observeActions trace name = do
-        forM [1::Int ..100] $ \_ -> MonadicObserver.bracketObserveIO trace name action
-    action = return $ reverse [1::Int ..1000]
-    findObserveClose objects = case find (\case {(ObserveClose _) -> True; _ -> False}) objects of
-        Just (ObserveClose state) -> state
-        _                         -> error "ObserveClose NOT found."
-    findObserveOpen objects = case find (\case {(ObserveOpen _) -> True; _ -> False}) objects of
-        Just (ObserveOpen state) -> state
-        _                        -> error "ObserveOpen NOT found."
 
+\end{code}
+
+\subsubsection{Control tracing in a hierarchy of |Trace|s}
+We can lay out traces in a hierarchical manner, that the children
+forward traced items to the parent |Trace|.
+A |NoTrace| introduced in this hierarchy will cut off a branch
+from messaging to the root.
+\begin{code}
 unit_hierarchy :: Assertion
 unit_hierarchy = do
     msgs <- STM.newTVarIO []
@@ -177,8 +188,8 @@ unit_hierarchy = do
     (_, trace1) <- transformTrace "inner" trace0
     logInfo trace1 "This should NOT have been displayed!"
 
-    insertInController trace1 "innest" Neutral
-    (_, trace2) <- transformTrace "innest" trace1
+    insertInController trace1 "innermost" Neutral
+    (_, trace2) <- transformTrace "innermost" trace1
     logInfo trace2 "This should NOT have been displayed also due to the trace one level above!"
 
     -- acquire the traced objects
@@ -191,47 +202,67 @@ unit_hierarchy = do
 
 \end{code}
 
+\subsubsection{Change a trace's minimum severity}\label{code:unit_trace_min_severity}
+A trace is configured with a minimum severity and filters out messages that are labelled
+with a lower severity. This minimum severity of the current trace can be changed.
 \begin{code}
-unit_min_severity :: Assertion
-unit_min_severity = do
+unit_trace_min_severity :: Assertion
+unit_trace_min_severity = do
     msgs <- STM.newTVarIO []
-    trace <- setupTrace $ TraceConfiguration (TVarList msgs) "test" Neutral Debug
+    trace <- setupTrace $ TraceConfiguration (TVarList msgs) "test min severity" Neutral Debug
     logInfo trace "Message #1"
 
+    -- raise the minimum severity to Warning
     setMinSeverity trace Warning
+    -- this message will not be traced
     logInfo trace "Message #2"
 
+    -- lower the minimum severity to Info
     setMinSeverity trace Info
+    -- this message is traced
     logInfo trace "Message #3"
 
     -- acquire the traced objects
     res <- STM.readTVarIO msgs
 
-    -- only the first message should have been traced
+    -- only the first and last messages should have been traced
+    assertBool
+        ("Found more or less messages than expected: " ++ show res)
+        (length res == 2)
     assertBool
         ("Found Info message when Warning was minimum severity: " ++ show res)
         (all (\case {(LP (LogMessage (LogItem _ Info "Message #2"))) -> False; _ -> True}) res)
 
 \end{code}
 
+\subsubsection{Change the minimum severity of a named context}\label{code:unit_named_min_severity}
+A trace of a named context can be configured with a minimum severity, such that the trace will
+filter out messages that are labelled with a lower severity.
 \begin{code}
-unit_severity_change :: Assertion
-unit_severity_change = do
+unit_named_min_severity :: Assertion
+unit_named_min_severity = do
     msgs <- STM.newTVarIO []
-    trace0 <- setupTrace $ TraceConfiguration (TVarList msgs) "test" Neutral Debug
+    trace0 <- setupTrace $ TraceConfiguration (TVarList msgs) "test named severity" Neutral Debug
     trace@(ctx, _) <- appendName "sev-change" trace0
     logInfo trace "Message #1"
 
+    -- raise the minimum severity to Warning
     setNamedSeverity ctx (loggerName ctx) Warning
+    -- this message will not be traced
     logInfo trace "Message #2"
 
+    -- lower the minimum severity to Info
     setNamedSeverity ctx (loggerName ctx) Info
+    -- this message is traced
     logInfo trace "Message #3"
 
     -- acquire the traced objects
     res <- STM.readTVarIO msgs
 
-    -- only the first message should have been traced
+    -- only the first and last messages should have been traced
+    assertBool
+        ("Found more or less messages than expected: " ++ show res)
+        (length res == 2)
     assertBool
         ("Found Info message when Warning was minimum severity: " ++ show res)
         (all (\case {(LP (LogMessage (LogItem _ Info "Message #2"))) -> False; _ -> True}) res)
@@ -240,19 +271,20 @@ unit_severity_change = do
 
 \begin{code}
 unit_hierarchy' :: [TraceTransformer] -> ([LogObject] -> Bool) -> Assertion
-unit_hierarchy' (t1: t2: t3 : _) f = do
+unit_hierarchy' (t1 : t2 : t3 : _) f = do
     msgs <- STM.newTVarIO []
+    -- create trace of type 1
     trace1 <- setupTrace $ TraceConfiguration (TVarList msgs) "test" t1 Debug
     logInfo trace1 "Message from level 1."
 
-    -- subtrace of trace which traces nothing
+    -- subtrace of type 2
     insertInController trace1 "inner" t2
     (_, trace2) <- transformTrace "inner" trace1
     logInfo trace2 "Message from level 2."
 
-    insertInController trace2 "innest" t3
-    -- (\_, trace3) <- transformTrace "innest" trace2
-    _ <- STMObserver.bracketObserveIO trace2 "innest" setVar_
+    -- subsubtrace of type 3
+    insertInController trace2 "innermost" t3
+    _ <- STMObserver.bracketObserveIO trace2 "innermost" setVar_
     logInfo trace2 "Message from level 3."
     -- acquire the traced objects
     res <- STM.readTVarIO msgs
@@ -262,6 +294,9 @@ unit_hierarchy' (t1: t2: t3 : _) f = do
         ("Found more or less messages than expected: " ++ show res)
         (f res)
 
+\end{code}
+
+\begin{code}
 unit_trace_in_fork :: Assertion
 unit_trace_in_fork = do
     msgs <- STM.newTVarIO []
@@ -332,10 +367,12 @@ unit_noOpening_Trace = do
 
 \end{code}
 
+\subsubsection{Assert maximum length of log context name}\label{code:unit_append_name}
+The name of the log context cannot grow beyond a maximum number of characters, currently
+the limit is set to 50.
 \begin{code}
-
-uint_append_name :: Assertion
-uint_append_name = do
+unit_append_name :: Assertion
+unit_append_name = do
     trace0 <- setupTrace $ TraceConfiguration StdOut "test" Neutral Debug
     trace1 <- appendName bigName trace0
     (ctx2, _) <- appendName bigName trace1
@@ -345,6 +382,7 @@ uint_append_name = do
         (T.length (loggerName ctx2) <= 50)
   where
     bigName = T.replicate 50 "abcdefghijklmnopqrstuvwxyz"
+
 \end{code}
 
 \begin{code}

@@ -20,6 +20,7 @@ library
                        Cardano.BM.Configuration.Model
                        Cardano.BM.Controller
                        Cardano.BM.Counters
+                       Cardano.BM.Counters.Common
                        Cardano.BM.Counters.Dummy
                        Cardano.BM.Counters.Linux
                        Cardano.BM.Data
@@ -117,6 +118,8 @@ test-suite tests
                        tasty-hunit,
                        tasty-quickcheck,
                        text,
+                       time,
+                       time-units,
                        transformers,
                        void
   ghc-options:         -Wall

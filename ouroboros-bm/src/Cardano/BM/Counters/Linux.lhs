@@ -15,25 +15,18 @@ import           Control.Monad (forM)
 import           Data.Foldable (foldrM)
 import           Data.Set (member)
 import           Data.Text (Text)
-import           Data.Time.Units (Microsecond, fromMicroseconds)
 import           System.FilePath.Posix ((</>))
 import           System.IO (FilePath)
 import           System.Posix.Process (getProcessID)
 import           System.Posix.Types (ProcessID)
 import           Text.Read (readMaybe)
 
-import           GHC.Clock (getMonotonicTimeNSec)
-import           GHC.Word (Word64)
-
+import           Cardano.BM.Counters.Common (getMonoClock,
+                     nominalTimeToMicroseconds)
 import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
                      TraceTransformer (..))
 \end{code}
 %endif
-
-\begin{code}
-nominalTimeToMicroseconds :: Word64 -> Microsecond
-nominalTimeToMicroseconds = fromMicroseconds . toInteger . (`div` 1000)
-\end{code}
 
 \todo[inline]{we have to expand the |getMonoClock| and |readMemStats| functions\newline with ones that read full data from |proc|}
 
@@ -54,10 +47,6 @@ readCounters (ObservableTrace tts) = foldrM (\(sel, fun) a ->
                 , (ProcessStats, readProcStats)
                 , (IOStats, readProcIO)
                 ]
-    getMonoClock :: IO [Counter]
-    getMonoClock = do
-        t <- getMonotonicTimeNSec
-        return [ MonotonicClockTime "monoclock" $ nominalTimeToMicroseconds t ]
 \end{code}
 
 \begin{code}

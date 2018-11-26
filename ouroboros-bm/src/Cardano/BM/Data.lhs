@@ -30,7 +30,6 @@ module Cardano.BM.Data
   , Severity (..)
   , Counter (..)
   , CounterState (..)
-  , diffTimeObserved
   , Backend (..)
   , ScribeKind (..)
   )
@@ -176,7 +175,7 @@ data Counter = MonotonicClockTime Text Microsecond
              | StatInfo Text Integer
              | IOCounter Text Integer
              | CpuCounter Text Integer
-               deriving (Show, Generic, ToJSON)
+               deriving (Eq, Show, Generic, ToJSON)
 
 instance ToJSON Microsecond where
     toJSON = toJSON . toMicroseconds
@@ -199,6 +198,8 @@ instance Show CounterState where
 \end{code}
 
 \subsubsection{TraceContext}\label{code:TraceContext}
+We keep the context's name and a reference to the |TraceController|
+in the |TraceContext|.
 \begin{code}
 
 type LoggerName = Text
@@ -208,6 +209,12 @@ data TraceContext = TraceContext {
     , controller :: MVar TraceController
     }
 
+\end{code}
+
+\subsubsection{TraceController}\label{code:TraceController}
+\todo[inline]{TODO replace the |TraceController| with access to \nameref{Configuration}}
+
+\begin{code}
 type TraceTransformerMap = Map LoggerName TraceTransformer
 type SeverityMap         = Map LoggerName Severity
 
@@ -229,27 +236,16 @@ data TraceConfiguration = TraceConfiguration
   , tcSeverity         :: Severity
   }
 
+\end{code}
+
+\subsubsection{TraceConfiguration}\label{code:TraceConfiguration}
+\begin{code}
+
 data OutputKind = StdOut
                 | TVarList (STM.TVar [LogObject])
                 | TVarListNamed (STM.TVar [LogNamed LogObject])
                 | Null
                 deriving Eq
-
-diffTimeObserved :: CounterState -> CounterState -> Microsecond
-diffTimeObserved (CounterState _ startCounters) (CounterState _ endCounters) =
-    let
-        startTime = getMonotonicTime startCounters
-        endTime   = getMonotonicTime endCounters
-    in
-        endTime - startTime
-  where
-    getMonotonicTime counters = case (filter isMonotonicClockCounter counters) of
-        [(MonotonicClockTime _ micros)] -> micros
-        _                               -> error "Exactly one time measurements was expected!"
-
-isMonotonicClockCounter :: Counter -> Bool
-isMonotonicClockCounter (MonotonicClockTime _ _) = True
-isMonotonicClockCounter _                        = False
 
 \end{code}
 
