@@ -27,8 +27,8 @@ library
                        Cardano.BM.Observer.Monadic
                        Cardano.BM.Observer.STM
                        Cardano.BM.Output.Aggregation
-                       Cardano.BM.Output.Internal
-                       Cardano.BM.Output.Katip
+                       Cardano.BM.Output.EKGView
+                       Cardano.BM.Output.Log
                        Cardano.BM.Output.Switchboard
                        Cardano.BM.Setup
                        Cardano.BM.Trace

@@ -9,7 +9,6 @@ module Cardano.BM.Setup
     (
       setupTrace
     , withTrace
-    , setupComponents
     ) where
 
 import           Control.Concurrent.MVar (newMVar)
@@ -19,13 +18,10 @@ import           Data.Map (singleton)
 import qualified Cardano.BM.Configuration
 import           Cardano.BM.Data (LoggerName, OutputKind (..), Severity (..),
                      TraceConfiguration (..), TraceContext (..),
-                     TraceController (..), TraceTransformer)
+                     TraceController (..), SubTrace)
 import qualified Cardano.BM.Output.Switchboard
-import qualified Cardano.BM.Output.Aggregation
-import qualified Cardano.BM.Output.EKGView
-import qualified Cardano.BM.Output.Katip
 import           Cardano.BM.Trace (Trace, natTrace, noTrace, stdoutTrace,
-                     traceInTVarIO, traceNamedInTVarIO, transformTrace)
+                     traceInTVarIO, traceNamedInTVarIO, subTrace)
 
 \end{code}
 %endif
@@ -35,6 +31,8 @@ import           Cardano.BM.Trace (Trace, natTrace, noTrace, stdoutTrace,
 
 setupTrace :: MonadIO m => TraceConfiguration -> m (Trace m)
 setupTrace (TraceConfiguration outputKind name traceTransformer sev) = do
+    c <- liftIO $ Cardano.BM.Configuration.setup "some_file_path.yaml"
+    _ <- liftIO $ Cardano.BM.Output.Switchboard.setup c
     ctx <- liftIO $ newContext name traceTransformer sev
     let logTrace0 = case outputKind of
             StdOut             -> natTrace liftIO stdoutTrace
@@ -43,7 +41,7 @@ setupTrace (TraceConfiguration outputKind name traceTransformer sev) = do
             Null               -> noTrace
 
     let logTrace = (ctx, logTrace0)
-    (_, logTrace') <- transformTrace "" logTrace
+    (_, logTrace') <- subTrace "" logTrace
     return logTrace'
 
 \end{code}
@@ -59,7 +57,7 @@ withTrace cfg action = do
 
 \subsubsection{TraceContext}\label{code:TraceContext}
 \begin{code}
-newContext :: LoggerName -> TraceTransformer -> Severity -> IO TraceContext
+newContext :: LoggerName -> SubTrace -> Severity -> IO TraceContext
 newContext name traceTransformer sev = do
     ctrl <- newMVar $ TraceController {
                           traceTransformers = singleton name traceTransformer
@@ -70,18 +68,6 @@ newContext name traceTransformer sev = do
         loggerName = name
       , controller = ctrl
       }
-
-\end{code}
-
-\subsubsection{setupComponents}\label{code:setupComponents}
-\begin{code}
-setupComponents :: IO ()
-setupComponents = do
-    c <- Cardano.BM.Configuration.setup "some_file_path.yaml"
-    Cardano.BM.Output.Switchboard.setup c
-    Cardano.BM.Output.EKGView.setup c
-    Cardano.BM.Output.Aggregation.setup c
-    Cardano.BM.Output.Katip.setup c
 
 \end{code}
 

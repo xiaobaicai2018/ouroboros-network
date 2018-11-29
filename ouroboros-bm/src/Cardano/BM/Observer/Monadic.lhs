@@ -21,10 +21,10 @@ import           Data.Unique (hashUnique, newUnique)
 
 
 import           Cardano.BM.Data (CounterState (..), LogObject (..),
-                     TraceTransformer (..))
+                     SubTrace (..))
 import           Cardano.BM.Counters (readCounters)
 import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject,
-                     transformTrace)
+                     subTrace)
 \end{code}
 %endif
 
@@ -35,10 +35,10 @@ import           Cardano.BM.Trace (Trace, logInfo, traceNamedObject,
 --   given as name then the logger name remains untouched.
 bracketObserveIO :: Trace IO -> Text -> IO t -> IO t
 bracketObserveIO logTrace0 name action = do
-    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    (traceTransformer, logTrace) <- subTrace name logTrace0
     bracketObserveIO' traceTransformer logTrace action
 
-bracketObserveIO' :: TraceTransformer -> Trace IO -> IO t -> IO t
+bracketObserveIO' :: SubTrace -> Trace IO -> IO t -> IO t
 bracketObserveIO' NoTrace _ action = action
 bracketObserveIO' traceTransformer logTrace action = do
     countersid <- observeOpen traceTransformer logTrace
@@ -51,7 +51,7 @@ bracketObserveIO' traceTransformer logTrace action = do
 
 \begin{code}
 
-observeOpen :: TraceTransformer -> Trace IO -> IO CounterState
+observeOpen :: SubTrace -> Trace IO -> IO CounterState
 observeOpen traceTransformer logTrace = do
     identifier <- newUnique
     logInfo logTrace $ "Opening: " <> pack (show $ hashUnique identifier)
@@ -67,7 +67,7 @@ observeOpen traceTransformer logTrace = do
 
 \begin{code}
 
-observeClose :: TraceTransformer -> Trace IO -> CounterState -> [LogObject] -> IO ()
+observeClose :: SubTrace -> Trace IO -> CounterState -> [LogObject] -> IO ()
 observeClose traceTransformer logTrace (CounterState identifier _) logObjects = do
     logInfo logTrace $ "Closing: " <> pack (show $ hashUnique identifier)
 

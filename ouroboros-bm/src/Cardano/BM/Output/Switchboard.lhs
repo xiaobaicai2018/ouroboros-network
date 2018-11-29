@@ -1,41 +1,40 @@
-\subsection{Cardano.BM.Output.Switchboard}
+\subsection{Cardano.BM.Output.Switchboard}\label{sec:Switchboard}
 
 %if False
 \begin{code}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 module Cardano.BM.Output.Switchboard
     (
-      setup
+      Switchboard
+    , setup
     , pass
     , takedown
     ) where
 
 import qualified Control.Concurrent.Async as Async
-import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
-                     withMVar)
+import           Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar,
+                     takeMVar, withMVar)
 import           Control.Concurrent.STM (STM, atomically)
 import qualified Control.Concurrent.STM.TBQueue as TBQ
 import           Control.Monad (forM_)
 
 import           Cardano.BM.Configuration (Configuration)
-import           Cardano.BM.Data (Backend (..), NamedLogItem)
-import qualified Cardano.BM.Output.Katip as Katip
-
-import           System.IO.Unsafe (unsafePerformIO)
+import           Cardano.BM.Data (Backend (..), HasPass (..), NamedLogItem)
+import qualified Cardano.BM.Output.Aggregation
+import qualified Cardano.BM.Output.EKGView
+import qualified Cardano.BM.Output.Log
 
 \end{code}
 %endif
 
-\subsubsection{State representation}
+\subsubsection{State representation}\label{code:Switchboard}
 The switchboard is a singleton.
 
 \begin{code}
--- internal access to the switchboard
-{-# NOINLINE switchboard #-}
-switchboard :: MVar SwitchboardInternal
-switchboard = unsafePerformIO $ do
-    newMVar $ error "Switchboard MVar is not initialized."
+type SwitchboardMVar = MVar SwitchboardInternal
+newtype Switchboard = Switchboard
+    { getSB :: SwitchboardMVar }
 
 -- Our internal state
 data SwitchboardInternal = SwitchboardInternal
@@ -51,29 +50,36 @@ The queue is initialized and the message dispatcher launched.
 TODO: the backends should be connected according to configuration.
 
 \begin{code}
-setup :: Configuration -> IO ()
-setup _ = do
-    _ <- takeMVar switchboard
-    q <- atomically $ TBQ.newTBQueue 2048
-    d <- spawnDispatcher q
+setup :: Configuration -> IO Switchboard
+setup cfg = do
+    ekg <- Cardano.BM.Output.EKGView.setup cfg
+    agg <- Cardano.BM.Output.Aggregation.setup cfg
+    log <- Cardano.BM.Output.Log.setup cfg
     -- TODO connect backends according to configuration
-    let be = [ Backend {pass'=Katip.pass "StdoutSK"} ]
-    putMVar switchboard $ SwitchboardInternal q d be
+    let bs = [ MkBackend {pass' = Cardano.BM.Output.Log.passN "StdoutSK" log}
+             , MkBackend {pass' = Cardano.BM.Output.EKGView.pass ekg}
+             , MkBackend {pass' = Cardano.BM.Output.Aggregation.pass agg} ]
 
-spawnDispatcher :: TBQ.TBQueue (Maybe NamedLogItem) -> IO (Async.Async ())
-spawnDispatcher queue = Async.async qProc
+    sbref <- newEmptyMVar
+    q <- atomically $ TBQ.newTBQueue 2048
+    d <- spawnDispatcher sbref q
+    putMVar sbref $ SwitchboardInternal q d bs
+    return $ Switchboard sbref
   where
-    qProc = do
-        nli' <- atomically $ TBQ.readTBQueue queue
-        case nli' of
-            Just nli -> do
-                putStrLn $ "dispatcher read: " ++ (show nli)
-                withMVar switchboard $ \sb ->
-                    forM_ (sbBackends sb) (dispatch nli)
-                qProc
-            Nothing -> return ()   -- end dispatcher
-    dispatch :: NamedLogItem -> Backend -> IO ()
-    dispatch nli backend = (pass' backend) nli
+    spawnDispatcher :: SwitchboardMVar -> TBQ.TBQueue (Maybe NamedLogItem) -> IO (Async.Async ())
+    spawnDispatcher switchboard queue = Async.async qProc
+      where
+        qProc = do
+            nli' <- atomically $ TBQ.readTBQueue queue
+            case nli' of
+                Just nli -> do
+                    putStrLn $ "dispatcher read: " ++ (show nli)
+                    withMVar switchboard $ \sb ->
+                        forM_ (sbBackends sb) (dispatch nli)
+                    qProc
+                Nothing -> return ()   -- end dispatcher
+        dispatch :: NamedLogItem -> Backend -> IO ()
+        dispatch nli backend = (pass' backend) nli
 
 \end{code}
 
@@ -82,18 +88,17 @@ Incoming messages are put into the queue, and
 then processed by the dispatcher.
 
 \begin{code}
-pass :: NamedLogItem -> IO ()
-pass item = do
-    putStrLn $ "Cardano.BM.Output.Switchboard.pass " ++ (show item)
-    withMVar switchboard $ \sb ->
-        atomically $ writequeue (sbQueue sb) item
-  where
-    writequeue :: TBQ.TBQueue (Maybe NamedLogItem) -> NamedLogItem -> STM ()
-    writequeue q i = do
-        nocapacity <- TBQ.isFullTBQueue q
-        if not nocapacity
-          then TBQ.writeTBQueue q (Just i)
-          else return ()
+instance HasPass Switchboard where
+    pass switchboard item = do
+        let writequeue :: TBQ.TBQueue (Maybe NamedLogItem) -> NamedLogItem -> STM ()
+            writequeue q i = do
+                nocapacity <- TBQ.isFullTBQueue q
+                if not nocapacity
+                then TBQ.writeTBQueue q (Just i)
+                else return ()
+        putStrLn $ "Cardano.BM.Output.Switchboard.pass " ++ (show item)
+        withMVar (getSB switchboard) $ \sb ->
+            atomically $ writequeue (sbQueue sb) item
 
 \end{code}
 
@@ -101,9 +106,9 @@ pass item = do
 The queue is flushed before the dispatcher terminates.
 
 \begin{code}
-takedown :: IO ()
-takedown = do
-    (q, d) <- withMVar switchboard $ \sb ->
+takedown :: Switchboard -> IO ()
+takedown switchboard = do
+    (q, d) <- withMVar (getSB switchboard) $ \sb ->
                    return (sbQueue sb, sbDispatch sb)
     -- send terminating item to the queue
     atomically $ TBQ.writeTBQueue q Nothing

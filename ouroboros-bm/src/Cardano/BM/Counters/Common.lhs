@@ -16,7 +16,7 @@ import           Data.Time.Units (Microsecond, fromMicroseconds)
 import           GHC.Clock (getMonotonicTimeNSec)
 import           GHC.Word (Word64)
 
-import           Cardano.BM.Data (Counter (..), ObservableInstance (..))
+import           Cardano.BM.Data (Counter (..))
 \end{code}
 %endif
 

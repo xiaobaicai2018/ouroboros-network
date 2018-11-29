@@ -21,10 +21,9 @@ import           System.Posix.Process (getProcessID)
 import           System.Posix.Types (ProcessID)
 import           Text.Read (readMaybe)
 
-import           Cardano.BM.Counters.Common (getMonoClock,
-                     nominalTimeToMicroseconds)
+import           Cardano.BM.Counters.Common (getMonoClock)
 import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
-                     TraceTransformer (..))
+                     SubTrace (..))
 \end{code}
 %endif
 
@@ -32,7 +31,7 @@ import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
 
 \begin{code}
 
-readCounters :: TraceTransformer -> IO [Counter]
+readCounters :: SubTrace -> IO [Counter]
 readCounters NoTrace             = return []
 readCounters Neutral             = return []
 readCounters UntimedTrace        = return []

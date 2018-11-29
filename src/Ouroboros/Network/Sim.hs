@@ -47,7 +47,7 @@ import qualified Ouroboros.Network.MonadClass.MonadSTM as MonadSTM
 import           Ouroboros.Network.MonadClass.MonadTimer
 
 import           Cardano.BM.Data (OutputKind (..), TraceConfiguration (..),
-                     TraceTransformer (..))
+                     SubTrace (..))
 import           Cardano.BM.Setup (setupTrace)
 import           Cardano.BM.Trace (logNotice)
 

@@ -1,6 +1,6 @@
 format 221
 "Observer" // Cardano.BM::Observer
-  revision 4
+  revision 5
   modified_by 21 "axeld"
   // class settings
   
@@ -30,6 +30,62 @@ format 221
   activitydiagramsettings
    end
   
+  classview 128277 "Counters"
+    
+    classdiagramsettings member_max_width 0 end
+    
+    classcompositediagramsettings end
+    
+    collaborationdiagramsettings end
+    
+    objectdiagramsettings end
+    
+    objectcompositediagramsettings end
+    
+    sequencediagramsettings end
+    
+    statediagramsettings
+     end
+    
+    
+    activitydiagramsettings
+     end
+    collaborationdiagram 128277 "Counters_readCounters"
+      stereotype "Diagram"
+      collaborationdiagramsettings end
+      size A4
+    end
+
+    class 130453 "STM"
+      visibility package 
+      cpp_decl "${comment}${template}class ${name}${inherit} {
+${members}};
+${inlines}
+"
+      java_decl ""
+      php_decl ""
+      python_2_2 python_decl ""
+      idl_decl ""
+      explicit_switch_type ""
+      mysql_decl ""
+      
+    end
+
+    classinstance 128149 "STM"
+      type class_ref 130453 // STM
+      attributes
+        end
+      relations
+        end
+    end
+
+    sequencediagram 135189 "Counters_readCounters_seq"
+      stereotype "Diagram"
+      sequencediagramsettings end
+      overlapping_bars size A4
+    end
+  end
+
   classview 141845 "Observer Classes"
     
     classdiagramsettings member_max_width 0 end
@@ -120,6 +176,10 @@ ${inlines}
 	
 	
       end
+
+      classrelation 180629 // <composition>
+	relation_ref 179605 // <composition>
+      end
     end
 
     class 129301 "Counters"
@@ -159,6 +219,18 @@ ${inlines}
 	
 	idl_decl "  ${comment}${oneway}${type} ${name}${(}${d0} ${t0} ${p0}${)}${raisesnl}${raises};
 "
+      end
+
+      classrelation 180501 // <composition>
+	relation 179605 *---
+	  a role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 180501 // <composition>
+	  b role_name "" private
+	    idl "  ${comment}${visibility}${type} ${name};
+"
+	    classrelation_ref 180629 // <composition>
       end
     end
 
@@ -529,5 +601,17 @@ ${inlines}
 	  b parent class_ref 129301 // Counters
       end
     end
+  end
+
+  simplerelation 128277
+    -_->
+      on 
+      package_ref 148373 // Configuration
+  end
+
+  simplerelation 128405
+    -_->
+      on 
+      package_ref 148245 // Trace
   end
 end

@@ -18,15 +18,14 @@ module Cardano.BM.Counters.Dummy
 import           Data.Foldable (foldrM)
 import           Data.Set (member)
 
-import           Cardano.BM.Counters.Common (getMonoClock,
-                     nominalTimeToMicroseconds)
+import           Cardano.BM.Counters.Common (getMonoClock)
 import           Cardano.BM.Data (Counter (..), ObservableInstance (..),
-                     TraceTransformer (..))
+                     SubTrace (..))
 \end{code}
 %endif
 
 \begin{code}
-readCounters :: TraceTransformer -> IO [Counter]
+readCounters :: SubTrace -> IO [Counter]
 readCounters NoTrace             = return []
 readCounters Neutral             = return []
 readCounters UntimedTrace        = return []

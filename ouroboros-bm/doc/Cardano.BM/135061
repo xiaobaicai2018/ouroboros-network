@@ -1,6 +1,6 @@
 format 221
 "Output" // Cardano.BM::Output
-  revision 6
+  revision 7
   modified_by 21 "axeld"
   // class settings
   
@@ -428,5 +428,11 @@ ${members}};
       mysql_decl ""
       
     end
+  end
+
+  simplerelation 128149
+    -_->
+      on 
+      package_ref 148373 // Configuration
   end
 end

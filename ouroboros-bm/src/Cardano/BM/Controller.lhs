@@ -25,15 +25,15 @@ import           Data.Text (Text, take)
 
 import           Cardano.BM.Data (LogItem (..), LoggerName, Severity (..),
                      Trace, TraceContext (..), TraceController (..),
-                     TraceTransformer (..))
+                     SubTrace (..))
 
 \end{code}
 %endif
 
-\subsubsection{Add a |TraceTransformer| to this |Trace|}\label{code:insertInController}
+\subsubsection{Add a |SubTrace| to this |Trace|}\label{code:insertInController}
 It will get activated once we enter the named context.
 \begin{code}
-insertInController :: Monad m =>  Trace m -> Text -> TraceTransformer -> IO ()
+insertInController :: Monad m =>  Trace m -> Text -> SubTrace -> IO ()
 insertInController (ctx, _) name trans = do
     let currentLoggerName = loggerName ctx
         name' = appendWithDot currentLoggerName name
@@ -63,7 +63,7 @@ getNamedSeverity :: TraceContext -> LoggerName -> IO (Maybe Severity)
 getNamedSeverity ctx name = withMVar (controller ctx) $ \tc ->
     return $ lookup name (severityMap tc)
 
-findTraceTransformer :: Trace m -> Text -> IO TraceTransformer
+findTraceTransformer :: Trace m -> Text -> IO SubTrace
 findTraceTransformer (ctx, _) name =
     withMVar (controller ctx) $ \tc ->
         return $ findWithDefault Neutral name (traceTransformers tc)

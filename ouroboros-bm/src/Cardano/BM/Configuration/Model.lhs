@@ -3,12 +3,14 @@
 
 %if False
 \begin{code}
-{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE OverloadedStrings   #-}
 
 module Cardano.BM.Configuration.Model
     (
       Configuration
     , setup
+    , minSeverity
+    , setMinSeverity
     , inspectSeverity
     , setSeverity
     , getBackends
@@ -19,26 +21,22 @@ module Cardano.BM.Configuration.Model
     --, takedown
     ) where
 
-import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
-                     withMVar)
+import           Control.Concurrent.MVar (MVar, newEmptyMVar, putMVar,
+                     takeMVar, withMVar)
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as HM
 import           Data.Text (Text, pack)
 
 import           Cardano.BM.Data (Severity (..), Backend (..))
 
-import           System.IO.Unsafe (unsafePerformIO)
-
 \end{code}
 %endif
 
 The configuration is a singleton.
 \begin{code}
--- internal access to the configuration
-{-# NOINLINE configuration #-}
-configuration :: MVar ConfigurationInternal
-configuration = unsafePerformIO $ do
-    newMVar $ error "Configuration MVar is not initialized."
+type ConfigurationMVar = MVar ConfigurationInternal
+newtype Configuration = Configuration
+    { getCG :: ConfigurationMVar }
 
 -- Our internal state
 data ConfigurationInternal = ConfigurationInternal
@@ -51,36 +49,25 @@ data ConfigurationInternal = ConfigurationInternal
 --    options:  config.logrotation = { maxFiles = 10; maxSize = 5000000 }
 --              config.logprefix = { path = "/mnt/disk/spacy" }
 
-type Configuration = MVar ConfigurationInternal
-
 \end{code}
 
 \begin{code}
-getBackends :: Text -> IO (Maybe [Backend])
-getBackends name =
-    withMVar configuration $ \cg -> do
+getBackends :: Configuration -> Text -> IO (Maybe [Backend])
+getBackends configuration name =
+    withMVar (getCG configuration) $ \cg -> do
         let outs = HM.lookup name (cgMapOutput cg)
         case outs of
             Nothing -> do
                 return $ Just (cgDefBackends cg)
             Just os -> return $ Just os
 
-{-
-defaultBackends :: IO [Backend]
-defaultBackends = do
-    -- read configuration?
-    return [ Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show StdoutSK  ))}
-           , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
-           , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
-           ]
--}
-setDefaultBackends :: [Backend] -> IO ()
-setDefaultBackends bes = do
-    cg <- takeMVar configuration
-    putMVar configuration $ cg { cgDefBackends = bes }
+setDefaultBackends :: Configuration -> [Backend] -> IO ()
+setDefaultBackends configuration bes = do
+    cg <- takeMVar (getCG configuration)
+    putMVar (getCG configuration) $ cg { cgDefBackends = bes }
 
-registerBackend :: Text -> Maybe Backend -> IO ()
-registerBackend kn f = pure () -- TODO
+registerBackend :: Configuration -> Text -> Maybe Backend -> IO ()
+registerBackend _ kn f = pure () -- TODO
   --  registerBackend "some" (Just Backend { pass' = Katip.pass (show StdoutSK) })
   --  registerBackend "severe.error" (Just Backend { pass' = Katip.pass "StdoutSK::severe.log") })
 
@@ -88,8 +75,8 @@ registerBackend kn f = pure () -- TODO
 
 \begin{code}
 getOption :: Configuration -> Text -> IO (Maybe Text)
-getOption mcg name = do
-    withMVar mcg $ \cg ->
+getOption configuration name = do
+    withMVar (getCG configuration) $ \cg ->
         case HM.lookup name (cgOptions cg) of
             Nothing -> return Nothing
             Just o -> return $ Just $ pack $ show o
@@ -97,27 +84,36 @@ getOption mcg name = do
 \end{code}
 
 \begin{code}
-inspectSeverity :: Text -> IO (Maybe Severity)
-inspectSeverity name =
-    withMVar configuration $ \cg ->
-        return $ HM.lookup name (cgMapSeverity cg)
+minSeverity :: Configuration -> IO Severity
+minSeverity configuration = withMVar (getCG configuration) $ \cg ->
+    return $ cgMinSeverity cg
+
+setMinSeverity :: Configuration -> Severity -> IO ()
+setMinSeverity configuration sev = do
+    cg <- takeMVar (getCG configuration)
+    putMVar (getCG configuration) $ cg { cgMinSeverity = sev }
 
 \end{code}
 
 \begin{code}
+inspectSeverity :: Configuration -> Text -> IO (Maybe Severity)
+inspectSeverity configuration name =
+    withMVar (getCG configuration) $ \cg ->
+        return $ HM.lookup name (cgMapSeverity cg)
+
 -- if Maybe Severity given is Nothing then the entry for this name is deleted.
-setSeverity :: Text -> Maybe Severity -> IO ()
-setSeverity _name _sev = do
-    cg <- takeMVar configuration
-    putMVar configuration $ cg { cgMapSeverity = HM.update (const _sev) _name (cgMapSeverity cg) }
+setSeverity :: Configuration -> Text -> Maybe Severity -> IO ()
+setSeverity configuration name sev = do
+    cg <- takeMVar (getCG configuration)
+    putMVar (getCG configuration) $ cg { cgMapSeverity = HM.update (const sev) name (cgMapSeverity cg) }
 
 \end{code}
 
 \begin{code}
 setup :: Text -> IO Configuration
 setup _ = do
-    _ <- takeMVar configuration
-    putMVar configuration $ ConfigurationInternal HM.empty HM.empty HM.empty Debug []
-    return configuration
+    cgref <- newEmptyMVar
+    putMVar cgref $ ConfigurationInternal HM.empty HM.empty HM.empty Debug []
+    return $ Configuration cgref
 
 \end{code}

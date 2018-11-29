@@ -1,30 +1,33 @@
-\subsection{Cardano.BM.Output.Katip}
+\subsection{Cardano.BM.Output.Log}
 
 %if False
 \begin{code}
-{-# LANGUAGE DeriveAnyClass     #-}
-{-# LANGUAGE DeriveGeneric      #-}
-{-# LANGUAGE LambdaCase         #-}
-{-# LANGUAGE OverloadedStrings  #-}
-{-# LANGUAGE RankNTypes         #-}
-{-# LANGUAGE RecordWildCards    #-}
-{-# LANGUAGE StandaloneDeriving #-}
-{-# LANGUAGE FlexibleInstances  #-}
+{-# LANGUAGE DeriveAnyClass      #-}
+{-# LANGUAGE DeriveGeneric       #-}
+{-# LANGUAGE LambdaCase          #-}
+{-# LANGUAGE OverloadedStrings   #-}
+{-# LANGUAGE RankNTypes          #-}
+{-# LANGUAGE RecordWildCards     #-}
+{-# LANGUAGE StandaloneDeriving  #-}
+{-# LANGUAGE FlexibleInstances   #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Cardano.BM.Output.Katip
+module Cardano.BM.Output.Log
     (
-      setup
-    , pass
+      Log
+    , setup
+    --, pass
+    , passN
     --, takedown
     , example
     ) where
 
 import           Control.AutoUpdate (UpdateSettings (..), defaultUpdateSettings,
                      mkAutoUpdate)
-import           Control.Concurrent.MVar (MVar, newMVar, putMVar, takeMVar,
-                     withMVar)
+import           Control.Concurrent.MVar (MVar, newEmptyMVar, newMVar, putMVar,
+                     takeMVar, withMVar)
+import           Control.Exception (Exception (..))
 import           Control.Exception.Safe (catchIO)
 import           Control.Monad (forM_)
 import           Control.Lens ((^.))
@@ -40,9 +43,9 @@ import           Data.Time.Format (defaultTimeLocale, formatTime)
 import           Data.Version (Version (..), showVersion)
 import           GHC.Conc (atomically, myThreadId)
 import           System.Directory (createDirectoryIfMissing)
+import           System.FilePath (takeDirectory)
 import           System.IO (BufferMode (LineBuffering), Handle, hClose,
                      hSetBuffering, stderr, stdout, openFile, IOMode (WriteMode))
-import           System.IO.Unsafe (unsafePerformIO)
 
 import qualified Katip as K
 import qualified Katip.Core as KC
@@ -50,18 +53,18 @@ import           Katip.Scribes.Handle (brackets)
 
 import qualified Cardano.BM.Configuration as Config
 import           Cardano.BM.Configuration.Model (setDefaultBackends)
-import           Cardano.BM.Data
-import qualified Cardano.BM.Output.Internal as Internal
+import           Cardano.BM.Data (Backend (..), HasPass (..), LogItem (..),
+                     LogNamed(..), LogObject (..), LogPrims (..),
+                     LogSelection (..), NamedLogItem, ScribeKind (..),
+                     Severity (..))
 \end{code}
 %endif
 
-Katip is a singleton.
+Log is a singleton.
 \begin{code}
--- internal access to katip
-{-# NOINLINE katip #-}
-katip :: MVar KatipInternal
-katip = unsafePerformIO $ do
-    newMVar $ error "Katip MVar is not initialized."
+type KatipMVar = MVar KatipInternal
+newtype Log = Log
+    { getK :: KatipMVar }
 
 -- Our internal state
 data KatipInternal = KatipInternal
@@ -69,14 +72,16 @@ data KatipInternal = KatipInternal
 
 \end{code}
 
+\begin{code}
+instance HasPass Log where
+    pass _ _ = pure () -- error "use passN"
+
+\end{code}
+
 Setup |katip| and its scribes according to the configuration
 \begin{code}
-setup :: Config.Configuration -> IO ()
+setup :: Config.Configuration -> IO Log
 setup config = do
-    setDefaultBackends [ Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show StdoutSK  ))}
-                       , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileTextSK))}
-                       , Backend {pass' = Cardano.BM.Output.Katip.pass (pack (show FileJsonSK))}
-                       ]
     cfoKey <- Config.getOptionOrDefault config (pack "cfokey") (pack "<unknown>")
     -- TODO setup katip
     le0 <- K.initLogEnv
@@ -87,8 +92,17 @@ setup config = do
     let le1 = updateEnv le0 timer
     stdoutScribe <- mkStdoutScribeJson K.V0
     le <- register [(StdoutSK, "stdout", stdoutScribe)] le1
-    _ <- takeMVar katip
-    putMVar katip $ KatipInternal le
+
+    kref <- newEmptyMVar
+    putMVar kref $ KatipInternal le
+    let katipref = Log kref
+    setDefaultBackends config
+        [ MkBackend {pass' = Cardano.BM.Output.Log.passN (pack (show StdoutSK  )) katipref}
+        , MkBackend {pass' = Cardano.BM.Output.Log.passN (pack (show FileTextSK)) katipref}
+        , MkBackend {pass' = Cardano.BM.Output.Log.passN (pack (show FileJsonSK)) katipref}
+        ]
+
+    return katipref
   where
     updateEnv :: K.LogEnv -> IO UTCTime -> K.LogEnv
     updateEnv le timer =
@@ -111,8 +125,8 @@ setup config = do
 example :: IO ()
 example = do
     config <- Config.setup "from_some_path.yaml"
-    setup config
-    pass (pack (show StdoutSK)) $ LogNamed
+    k <- setup config
+    passN (pack (show StdoutSK)) k $ LogNamed
                                             { lnName = "test"
                                             , lnItem = LP $ LogMessage $ LogItem
                                                 { liSelection = Both
@@ -120,17 +134,18 @@ example = do
                                                 , liPayload   = "Hello!"
                                                 }
                                             }
-    pass (pack (show StdoutSK)) $ LogNamed
+    passN (pack (show StdoutSK)) k $ LogNamed
                                             { lnName = "test"
                                             , lnItem = LP $ LogValue "cpu-no" 1
                                             }
 \end{code}
 
 \begin{code}
--- useful instances for Katip
+-- useful instances for katip
 deriving instance K.ToObject LogObject
 deriving instance K.ToObject LogItem
 deriving instance K.ToObject (Maybe LogObject)
+
 instance KC.LogItem LogObject where
     payloadKeys _ _ = KC.AllKeys
 instance KC.LogItem LogItem where
@@ -141,8 +156,8 @@ instance KC.LogItem (Maybe LogObject) where
 \end{code}
 
 \begin{code}
-pass :: Text -> NamedLogItem -> IO ()
-pass backend namedLogItem = withMVar katip $ \k -> do
+passN :: Text -> Log -> NamedLogItem -> IO ()
+passN backend katip namedLogItem = withMVar (getK katip) $ \k -> do
     -- TODO go through list of registered scribes
     --      and put into queue of scribe if backend kind matches
     --      compare start of name of scribe to (show backend <> "::")
@@ -223,7 +238,7 @@ mkFileScribeH h formatter colorize verbosity = do
                         formatter h colorize verbosity item
     pure $ K.Scribe logger (hClose h)
 
-mkTextFileScribe :: Internal.FileDescription -> Bool -> Severity -> K.Verbosity -> IO K.Scribe
+mkTextFileScribe :: FileDescription -> Bool -> Severity -> K.Verbosity -> IO K.Scribe
 mkTextFileScribe fdesc colorize s v = do
     mkFileScribe fdesc formatter colorize s v
   where
@@ -233,20 +248,20 @@ mkTextFileScribe fdesc colorize s v = do
         TIO.hPutStrLn hdl tmsg
 
 mkFileScribe
-    :: Internal.FileDescription
+    :: FileDescription
     -> (forall a . K.LogItem a => Handle -> Bool -> K.Verbosity -> K.Item a -> IO ())  -- format and output function, returns written bytes
     -> Bool  -- whether the output is colourized
     -> Severity
     -> K.Verbosity
     -> IO K.Scribe
 mkFileScribe fdesc formatter colorize _ v = do
-    let prefixDir = Internal.prefixPath fdesc
+    let prefixDir = prefixPath fdesc
     (createDirectoryIfMissing True prefixDir)
-        `catchIO` (Internal.prtoutException ("cannot log prefix directory: " ++ prefixDir))
-    let fpath = Internal.filePath fdesc
+        `catchIO` (prtoutException ("cannot log prefix directory: " ++ prefixDir))
+    let fpath = filePath fdesc
     h <- catchIO (openFile fpath WriteMode) $
                         \e -> do
-                            Internal.prtoutException ("error while opening log: " ++ fpath) e
+                            prtoutException ("error while opening log: " ++ fpath) e
                             -- fallback to standard output in case of exception
                             return stdout
     hSetBuffering h LineBuffering
@@ -295,7 +310,7 @@ formatItem withColor _verb K.Item{..} =
       | withColor = "\ESC["<> c <> "m" <> m <> "\ESC[0m"
       | otherwise = m
 
--- translate Severity to Katip.Severity
+-- translate Severity to Log.Severity
 sev2klog :: Severity -> K.Severity
 sev2klog = \case
     Debug   -> K.DebugS
@@ -303,5 +318,21 @@ sev2klog = \case
     Notice  -> K.NoticeS
     Warning -> K.WarningS
     Error   -> K.ErrorS
+
+\end{code}
+
+\begin{code}
+data FileDescription = FileDescription {
+                         filePath   :: !FilePath }
+                       deriving (Show)
+
+prefixPath :: FileDescription -> FilePath
+prefixPath = takeDirectory . filePath
+
+-- display message and stack trace of exception on stdout
+prtoutException :: Exception e => String -> e -> IO ()
+prtoutException msg e = do
+    putStrLn msg
+    putStrLn ("exception: " ++ displayException e)
 
 \end{code}

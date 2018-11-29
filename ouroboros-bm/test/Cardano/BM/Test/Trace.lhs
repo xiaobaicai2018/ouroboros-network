@@ -29,12 +29,12 @@ import           Cardano.BM.Controller (insertInController, setMinSeverity, setN
 import           Cardano.BM.Data (CounterState (..), LogItem (..),
                      LogNamed (..), LogObject (..), LogPrims (..),
                      ObservableInstance (..), OutputKind (..), Severity (..),
-                     TraceConfiguration (..), TraceTransformer (..),
+                     TraceConfiguration (..), SubTrace (..),
                      TraceContext (..), loggerName)
 import qualified Cardano.BM.Observer.Monadic as MonadicObserver
 import qualified Cardano.BM.Observer.STM as STMObserver
 import           Cardano.BM.Setup (setupTrace)
-import           Cardano.BM.Trace (Trace, appendName, logInfo, transformTrace)
+import           Cardano.BM.Trace (Trace, appendName, logInfo, subTrace)
 
 import           Test.Tasty (TestTree, testGroup)
 import           Test.Tasty.HUnit (Assertion, assertBool, testCase,
@@ -185,11 +185,11 @@ unit_hierarchy = do
 
     -- subtrace of trace which traces nothing
     insertInController trace0 "inner" NoTrace
-    (_, trace1) <- transformTrace "inner" trace0
+    (_, trace1) <- subTrace "inner" trace0
     logInfo trace1 "This should NOT have been displayed!"
 
     insertInController trace1 "innermost" Neutral
-    (_, trace2) <- transformTrace "innermost" trace1
+    (_, trace2) <- subTrace "innermost" trace1
     logInfo trace2 "This should NOT have been displayed also due to the trace one level above!"
 
     -- acquire the traced objects
@@ -270,7 +270,7 @@ unit_named_min_severity = do
 \end{code}
 
 \begin{code}
-unit_hierarchy' :: [TraceTransformer] -> ([LogObject] -> Bool) -> Assertion
+unit_hierarchy' :: [SubTrace] -> ([LogObject] -> Bool) -> Assertion
 unit_hierarchy' (t1 : t2 : t3 : _) f = do
     msgs <- STM.newTVarIO []
     -- create trace of type 1
@@ -279,7 +279,7 @@ unit_hierarchy' (t1 : t2 : t3 : _) f = do
 
     -- subtrace of type 2
     insertInController trace1 "inner" t2
-    (_, trace2) <- transformTrace "inner" trace1
+    (_, trace2) <- subTrace "inner" trace1
     logInfo trace2 "Message from level 2."
 
     -- subsubtrace of type 3

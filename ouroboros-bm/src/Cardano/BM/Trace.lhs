@@ -19,7 +19,7 @@ module Cardano.BM.Trace
     , appendName
     -- * utils
     , natTrace
-    , transformTrace
+    , subTrace
     -- * log functions
     , traceNamedObject
     , traceNamedItem
@@ -127,9 +127,9 @@ katipTrace = BaseTrace $ Op $ \lognamed -> do
 Every |Trace| ends in the switchboard which then takes care of
 dispatching the messages to outputs
 \begin{code}
-mainTrace :: TraceNamed IO
-mainTrace = BaseTrace $ Op $ \lognamed -> do
-    Switchboard.pass lognamed
+mainTrace :: Switchboard.Switchboard -> TraceNamed IO
+mainTrace sb = BaseTrace $ Op $ \lognamed -> do
+    Switchboard.pass sb lognamed
 
 \end{code}
 
@@ -278,7 +278,7 @@ traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 
 \end{code}
 
-\subsubsection{transformTrace}\label{code:transformTrace}
+\subsubsection{subTrace}\label{code:subTrace}
 \begin{code}
 
 --   Transforms the |Trace| given according to content of
@@ -286,8 +286,8 @@ traceNamedObject (ctx, logTrace) = traceWith (named logTrace (loggerName ctx))
 --   current |Trace| appended with the given name. If the
 --   empty |Text| is given as name then the logger name
 --   remains untouched.
-transformTrace :: MonadIO m => Text -> Trace m -> m (TraceTransformer, Trace m)
-transformTrace name tr@(ctx, _) = do
+subTrace :: MonadIO m => Text -> Trace m -> m (SubTrace, Trace m)
+subTrace name tr@(ctx, _) = do
     traceTransformer <- liftIO $ findTraceTransformer tr $ appendWithDot (loggerName ctx) name
     case traceTransformer of
         Neutral      -> do

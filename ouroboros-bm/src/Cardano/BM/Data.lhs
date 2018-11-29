@@ -5,9 +5,13 @@
 \begin{code}
 {-# LANGUAGE DeriveAnyClass     #-}
 {-# LANGUAGE DeriveGeneric      #-}
+{-# LANGUAGE FlexibleInstances  #-}
 {-# LANGUAGE LambdaCase         #-}
 {-# LANGUAGE OverloadedStrings  #-}
 {-# LANGUAGE StandaloneDeriving #-}
+{-# LANGUAGE RankNTypes         #-}
+
+{-# OPTIONS_GHC -fno-warn-orphans #-}
 
 module Cardano.BM.Data
   (
@@ -16,7 +20,7 @@ module Cardano.BM.Data
   , TraceConfiguration (..)
   , TraceContext (..)
   , TraceController (..)
-  , TraceTransformer (..)
+  , SubTrace (..)
   , TraceTransformerMap
   , OutputKind (..)
   , LogPrims (..)
@@ -32,12 +36,14 @@ module Cardano.BM.Data
   , CounterState (..)
   , Backend (..)
   , ScribeKind (..)
+  , HasPass (..)
   )
   where
 
 import qualified Control.Concurrent.STM.TVar as STM
 
 import           Control.Concurrent.MVar (MVar)
+--import           Control.Monad.IO.Class (MonadIO)
 
 import           Data.Aeson (FromJSON (..), ToJSON, toEncoding, toJSON)
 import           Data.Map (Map)
@@ -53,7 +59,14 @@ import           Cardano.BM.BaseTrace
 \end{code}
 %endif
 
-type aliases and empty types
+\subsubsection{Accepts a \nameref{code:NamedLogItem}}\label{code:HasPass}
+\begin{code}
+class HasPass t where
+    pass :: t -> NamedLogItem -> IO ()
+
+\end{code}
+
+\subsubsection{Type of a logged item}\label{code:NamedLogItem}
 \begin{code}
 type NamedLogItem = LogNamed LogObject
 
@@ -67,7 +80,7 @@ type Trace m = (TraceContext, TraceNamed m)
 \end{code}
 
 \subsubsection{TraceNamed}\label{code:TraceNamed}
-A |TraceNamed| is a trace of type \nameref{code:LogNamed} with payload \nameref{code:LogObject}.
+A |TraceNamed| is a specialized \nameref{code:BaseTrace} of type \nameref{code:LogNamed} with payload \nameref{code:LogObject}.
 \begin{code}
 
 type TraceNamed m = BaseTrace m (LogNamed LogObject)
@@ -86,24 +99,6 @@ data LogObject = LP LogPrims
                | ObserveClose CounterState
                  deriving (Generic, Show, ToJSON)
 
-\end{code}
-
-\subsubsection{TraceTransformer}\label{code:TraceTransformer}
-
-
-\begin{code}
-data TraceTransformer = Neutral
-                      | UntimedTrace
-                      | NoTrace
-                      | DropOpening
-                      | ObservableTrace (Set ObservableInstance)
-                        deriving (Show)
-
-data ObservableInstance = MonotonicClock
-                        | MemoryStats
-                        | ProcessStats
-                        | IOStats
-                          deriving (Eq, Ord, Show)
 \end{code}
 
 \todo[inline]{TODO |lnName :: Text|\newline storing a concatenation of names
@@ -129,6 +124,25 @@ data LogNamedPlus item = LogNamedPlus
     } deriving (Show)
 
 
+\end{code}
+
+\subsubsection{SubTrace}\label{code:SubTrace}
+\begin{code}
+data SubTrace = Neutral
+              | UntimedTrace
+              | NoTrace
+              | DropOpening
+              | ObservableTrace (Set ObservableInstance)
+                deriving (Show)
+\end{code}
+
+\subsubsection{ObservableInstance}\label{code:ObservableInstance}
+\begin{code}
+data ObservableInstance = MonotonicClock
+                        | MemoryStats
+                        | ProcessStats
+                        | IOStats
+                          deriving (Eq, Ord, Show)
 \end{code}
 
 \subsubsection{LogItem}\label{code:LogItem}
@@ -215,7 +229,7 @@ data TraceContext = TraceContext {
 \todo[inline]{TODO replace the |TraceController| with access to \nameref{Configuration}}
 
 \begin{code}
-type TraceTransformerMap = Map LoggerName TraceTransformer
+type TraceTransformerMap = Map LoggerName SubTrace
 type SeverityMap         = Map LoggerName Severity
 
 data TraceController = TraceController {
@@ -232,7 +246,7 @@ data TraceController = TraceController {
 data TraceConfiguration = TraceConfiguration
   { tcOutputKind       :: OutputKind
   , tcName             :: LoggerName
-  , tcTraceTransformer :: TraceTransformer
+  , tcTraceTransformer :: SubTrace
   , tcSeverity         :: Severity
   }
 
@@ -254,8 +268,7 @@ A backend is referenced through the function |pass'| which accepts
 a \nameref{code:NamedLogItem}.
 
 \begin{code}
-
-data Backend = Backend { pass' :: NamedLogItem -> IO () }
+data Backend = MkBackend { pass' :: NamedLogItem -> IO () }
 
 \end{code}
 

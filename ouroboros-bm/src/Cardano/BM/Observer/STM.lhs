@@ -3,7 +3,6 @@
 
 %if False
 \begin{code}
-{-# LANGUAGE OverloadedStrings #-}
 
 module Cardano.BM.Observer.STM
     (
@@ -15,9 +14,9 @@ import qualified Control.Monad.STM as STM
 
 import           Data.Text
 
-import           Cardano.BM.Data (LogObject (..), TraceTransformer (..))
+import           Cardano.BM.Data (LogObject (..), SubTrace (..))
 import           Cardano.BM.Observer.Monadic (observeClose, observeOpen)
-import           Cardano.BM.Trace (Trace, transformTrace)
+import           Cardano.BM.Trace (Trace, subTrace)
 \end{code}
 %endif
 
@@ -32,10 +31,10 @@ stmWithLog action = action
 
 bracketObserveIO :: Trace IO -> Text -> STM.STM t -> IO t
 bracketObserveIO logTrace0 name action = do
-    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    (traceTransformer, logTrace) <- subTrace name logTrace0
     bracketObserveIO' traceTransformer logTrace action
 
-bracketObserveIO' :: TraceTransformer -> Trace IO -> STM.STM t -> IO t
+bracketObserveIO' :: SubTrace -> Trace IO -> STM.STM t -> IO t
 bracketObserveIO' NoTrace _ action =
     STM.atomically action
 bracketObserveIO' traceTransformer logTrace action = do
@@ -51,10 +50,10 @@ bracketObserveIO' traceTransformer logTrace action = do
 
 bracketObserveLogIO :: Trace IO -> Text -> STM.STM (t,[LogObject]) -> IO t
 bracketObserveLogIO logTrace0 name action = do
-    (traceTransformer, logTrace) <- transformTrace name logTrace0
+    (traceTransformer, logTrace) <- subTrace name logTrace0
     bracketObserveLogIO' traceTransformer logTrace action
 
-bracketObserveLogIO' :: TraceTransformer -> Trace IO -> STM.STM (t,[LogObject]) -> IO t
+bracketObserveLogIO' :: SubTrace -> Trace IO -> STM.STM (t,[LogObject]) -> IO t
 bracketObserveLogIO' NoTrace _ action = do
     (t, _) <- STM.atomically $ stmWithLog action
     pure t
