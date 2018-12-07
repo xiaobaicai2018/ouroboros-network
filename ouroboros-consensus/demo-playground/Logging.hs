@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE FlexibleInstances          #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
 {-# LANGUAGE StandaloneDeriving         #-}
@@ -16,6 +17,10 @@ module Logging (
 import           Control.Concurrent.STM
 import           Control.Monad
 import           Data.Semigroup ((<>))
+import           Data.Text (pack)
+
+import           Cardano.BM.Data.Trace (Trace)
+import           Cardano.BM.Trace (logInfo)
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Chain (Chain (..))
@@ -28,11 +33,11 @@ data LogEvent = LogEvent {
     msg    :: String
   }
 
-showNetworkTraffic :: TBQueue LogEvent -> IO ()
-showNetworkTraffic q = forever $ do
+showNetworkTraffic :: TBQueue LogEvent -> Trace IO -> IO ()
+showNetworkTraffic q trace = forever $ do
     LogEvent{..} <- atomically $ readTBQueue q
     -- Add an extra newline to help readability.
-    putStrLn $ msg <> "\n"
+    logInfo trace $ pack msg <> "\n"
 
 instance Condense BlockHeader where
     condense BlockHeader{..} =
