@@ -165,6 +165,7 @@ executable demo-playground
                        containers,
                        cryptonite,
                        directory,
+                       iohk-monitoring,
                        mtl,
                        optparse-applicative,
                        serialise,

@@ -1,5 +1,6 @@
-{-# LANGUAGE FlexibleContexts #-}
-{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE FlexibleContexts  #-}
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications  #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 module Mock.TxSubmission (
       command'
@@ -14,9 +15,13 @@ import           Control.Exception (catch)
 import           Control.Monad.Except
 import qualified Data.Map.Strict as M
 import qualified Data.Set as Set
+import           Data.Text (pack)
 import           Data.Void
 import           Options.Applicative
 import           System.IO (IOMode (..))
+
+import           Cardano.BM.Data.Trace (Trace)
+import           Cardano.BM.Trace (logInfo)
 
 import           Ouroboros.Network.MonadClass hiding (threadDelay)
 import           Ouroboros.Network.Node (NodeId (..))
@@ -84,22 +89,23 @@ command' c descr p =
 -------------------------------------------------------------------------------}
 
 
-handleTxSubmission :: TopologyInfo -> Mock.Tx -> IO ()
-handleTxSubmission tinfo tx = do
+handleTxSubmission :: Trace IO -> TopologyInfo -> Mock.Tx -> IO ()
+handleTxSubmission trace tinfo tx = do
     topoE <- readTopologyFile (topologyFile tinfo)
     case topoE of
          Left e  -> error e
          Right t ->
              case M.lookup (node tinfo) (toNetworkMap t) of
                   Nothing -> error "Target node not found."
-                  Just _  -> submitTx (node tinfo) tx
+                  Just _  -> submitTx trace (node tinfo) tx
 
-submitTx :: NodeId -> Mock.Tx -> IO ()
-submitTx n tx = do
+submitTx :: Trace IO -> NodeId -> Mock.Tx -> IO ()
+submitTx trace n tx = do
     withTxPipe n WriteMode False $ \hdl -> do
         let x = error "submitTx: this handle wasn't supposed to be used"
         runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ())
-    putStrLn $ "The Id for this transaction is: " <> condense (H.hash @ShortHash tx)
+    logInfo trace $ "The Id for this transaction is: " <> pack (condense (H.hash @ShortHash tx))
+    threadDelay 1000 -- close scribes (finalizer) needed to flush the queues.
   where
       proto :: Protocol Mock.Tx Void ()
       proto = sendMsg tx
