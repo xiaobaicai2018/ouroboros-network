@@ -24,7 +24,7 @@ import           Protocol.Codec (hoistCodec)
 import           Cardano.BM.Configuration.Static (defaultConfigStdout)
 import           Cardano.BM.Data.Trace (Trace)
 import           Cardano.BM.Setup (setupTrace)
-import           Cardano.BM.Trace (appendName, logDebug)
+import           Cardano.BM.Trace (appendName, logNotice)
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Chain (pointHash)
@@ -52,6 +52,8 @@ import           Topology
 runNode :: CLI -> IO ()
 runNode cli@CLI{..} = do
     config <- defaultConfigStdout
+    -- add EKG
+    setSetupBackends config [EKGViewBK, KatipBK]
     trace <- setupTrace (Right config) "demo-playground"
     -- different names for seperate functionalities
     submitTxTrace <- appendName "submit-tx"   trace
@@ -70,8 +72,10 @@ runNode cli@CLI{..} = do
 -- if core, will also look at the mempool when trying to create a new block.
 handleSimpleNode :: forall p. DemoProtocolConstraints p
                  => Trace IO -> DemoProtocol p -> CLI -> TopologyInfo -> IO ()
-handleSimpleNode trace p CLI{..} (TopologyInfo myNodeId topologyFile) = do
-    logDebug trace $ "System started at " <> show systemStart
+handleSimpleNode trace0 p CLI{..} (TopologyInfo myNodeId topologyFile) = do
+    trace <- appendName (pack . show $ myNodeId) trace0
+
+    logNotice trace $ "System started at " <> show systemStart
     topoE <- readTopologyFile topologyFile
     case topoE of
          Left e -> error e
@@ -80,11 +84,11 @@ handleSimpleNode trace p CLI{..} (TopologyInfo myNodeId topologyFile) = do
                  nodeSetup = fromMaybe (error "node not found.") $
                                    M.lookup myNodeId topology
 
-             logDebug trace $ "**************************************"
-             logDebug trace $ "I am Node = " <> pack (show myNodeId)
-             logDebug trace $ "My consumers are " <> pack (show (consumers nodeSetup))
-             logDebug trace $ "My producers are " <> pack (show (producers nodeSetup))
-             logDebug trace $ "**************************************"
+             logNotice trace $ "**************************************"
+             logNotice trace $ "I am Node = " <> pack (show myNodeId)
+             logNotice trace $ "My consumers are " <> pack (show (consumers nodeSetup))
+             logNotice trace $ "My producers are " <> pack (show (producers nodeSetup))
+             logNotice trace $ "**************************************"
 
              let ProtocolInfo{..} = protocolInfo
                                       p
