@@ -4,6 +4,7 @@
 {-# LANGUAGE TypeFamilies           #-}
 {-# LANGUAGE TypeFamilyDependencies #-}
 {-# LANGUAGE UndecidableInstances   #-}
+{-# LANGUAGE CPP                    #-}
 {-# OPTIONS_GHC -fno-warn-orphans   #-}
 module Ouroboros.Network.MonadClass.MonadSTM
   ( MonadSTM (..)
@@ -195,10 +196,18 @@ instance MonadSTM IO where
 
   type TBQueue IO = STM.TBQueue
 
+#if MIN_VERSION_stm(2,5,0)
   newTBQueue     = STM.newTBQueue
+#else
+  -- As of STM 2.5.0.0, newTBQueue takes a Natural.
+  -- For versions prior, it takes an Int, so we'll go via the Enum instance.
+  newTBQueue     = STM.newTBQueue . fromEnum
+#endif
   readTBQueue    = STM.readTBQueue
   writeTBQueue   = STM.writeTBQueue
+#if MIN_VERSION_stm(2,5,0)
   lengthTBQueue  = STM.lengthTBQueue
+#endif
 
 --
 -- Default TMVar implementation in terms of TVars (used by sim)
