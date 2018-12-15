@@ -18,7 +18,7 @@ module Ouroboros.Network.MuxWithDeltaQ
 --   (SDU) data rates.
 --   
 --
--- Notes: 
+--  Notes: 
 -- 
 --   1) It is assumed that (for a given peer) that bulk delivery of
 --      blocks (i.e. in recovery mode) and normal, interactive,
@@ -32,7 +32,7 @@ module Ouroboros.Network.MuxWithDeltaQ
 --      amounts of data accruing in the O/S kernel); b) ensuring that
 --      any host egress data rate limits can be respected / enforced.
 --       
-
+--
 --  Current Caveats
 --
 --  1) Not considering how mini-protocol associations are constructed
@@ -42,3 +42,13 @@ module Ouroboros.Network.MuxWithDeltaQ
 --  2) Not yet considered notion of orderly termination - this not
 --     likely to be used in an operational context, but may be needed
 --     for test harness use.
+--
+--  Principle of operation
+--  ======================
+--
+--  Egress direction
+--  ----------------
+-- 
+--  The request for service (the demand) from a mini protocol is
+--  encapsulatedin a `Wanton`, such `Wanton`s are placed in a (finite)
+--   queue (e.g TM
