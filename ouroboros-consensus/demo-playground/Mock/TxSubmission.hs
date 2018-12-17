@@ -21,6 +21,7 @@ import           Options.Applicative
 import           System.IO (IOMode (..))
 
 import           Cardano.BM.Data.Trace (Trace)
+import           Cardano.BM.Observer.Monadic (bracketObserveIO)
 import           Cardano.BM.Trace (logInfo)
 
 import           Ouroboros.Network.MonadClass hiding (threadDelay)
@@ -97,7 +98,8 @@ handleTxSubmission trace tinfo tx = do
          Right t ->
              case M.lookup (node tinfo) (toNetworkMap t) of
                   Nothing -> error "Target node not found."
-                  Just _  -> submitTx trace (node tinfo) tx
+                  Just _  -> bracketObserveIO trace "submitTx" $
+                                submitTx trace (node tinfo) tx
 
 submitTx :: Trace IO -> NodeId -> Mock.Tx -> IO ()
 submitTx trace n tx = do

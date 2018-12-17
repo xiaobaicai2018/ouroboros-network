@@ -6,4 +6,5 @@ cabal new-run demo-playground -- \
     --system-start "$now" --slot-duration 2 \
     submit \
     -t demo-playground/simple-topology.json -n $1 \
-    --address $2 --amount $3
+    --address $2 --amount $3 \
+    -l demo-playground/log-config-submission.yaml
