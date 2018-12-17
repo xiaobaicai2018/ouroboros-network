@@ -17,11 +17,16 @@ import           Crypto.Random
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Semigroup ((<>))
+import           Data.Set (fromList)
 import           Data.Text (pack)
 
 import           Protocol.Codec (hoistCodec)
 
-import           Cardano.BM.Data.Trace (Trace)
+import qualified Cardano.BM.Configuration.Model as CM
+import           Cardano.BM.Data.Observable (ObservableInstance (..))
+import           Cardano.BM.Data.SubTrace (SubTrace (..))
+import           Cardano.BM.Data.Trace (Trace, TraceContext (..))
+import           Cardano.BM.Observer.Monadic (bracketObserveM)
 import           Cardano.BM.Setup (setupTrace)
 import           Cardano.BM.Trace (appendName, logNotice)
 
@@ -50,13 +55,11 @@ import           Topology
 
 runNode :: CLI -> IO ()
 runNode cli@CLI{..} = do
-    -- config <- defaultConfigStdout
-    -- add EKG
-    -- setSetupBackends config [EKGViewBK, KatipBK]
-    -- trace <- setupTrace (Right config) "demo-playground"
-    trace <- setupTrace (Left configFile) "demo-playground"
+    trace@(ctx, _) <- setupTrace (Left configFile) "demo-playground"
+    CM.setSubTrace (configuration ctx) "demo-playground.submit-tx" $
+        Just $ ObservableTrace observablesSet
     -- different names for seperate functionalities
-    submitTxTrace <- appendName "submit-tx"   trace
+    submitTxTrace <- subTrace   "submit-tx"   trace
     nodeTrace     <- appendName "simple-node" trace
     -- If the user asked to submit a transaction, we don't have to spin up a
     -- full node, we simply transmit it and exit.
@@ -67,13 +70,21 @@ runNode cli@CLI{..} = do
             case protocol of
               Some p -> case demoProtocolConstraints p of
                            Dict -> handleSimpleNode nodeTrace p cli topology
+  where
+    observablesSet = fromList [MonotonicClock, MemoryStats]
 
 -- | Setups a simple node, which will run the chain-following protocol and,
 -- if core, will also look at the mempool when trying to create a new block.
 handleSimpleNode :: forall p. DemoProtocolConstraints p
                  => Trace IO -> DemoProtocol p -> CLI -> TopologyInfo -> IO ()
-handleSimpleNode trace0 p CLI{..} (TopologyInfo myNodeId topologyFile) = do
-    trace <- appendName (pack . show $ myNodeId) trace0
+handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) = do
+    let nodeIdText = pack . show $ myNodeId
+    CM.setSubTrace
+        (configuration ctx)
+        ("demo-playground.simple-node." <> nodeIdText <> ".forgeBlock")
+        (Just $ ObservableTrace $ fromList [MonotonicClock])
+
+    trace <- appendName nodeIdText trace0
 
     logNotice trace $ "System started at " <> pack (show systemStart)
     topoE <- readTopologyFile topologyFile
@@ -124,7 +135,7 @@ handleSimpleNode trace0 p CLI{..} (TopologyInfo myNodeId topologyFile) = do
                                   lift . lift $ writeTVar nodeMempool mp'
                                   return ts
 
-                        Mock.forgeBlock pInfoConfig
+                        bracketObserveM trace "forgeBlock" Mock.forgeBlock pInfoConfig
                                         slot
                                         curNo
                                         prevHash

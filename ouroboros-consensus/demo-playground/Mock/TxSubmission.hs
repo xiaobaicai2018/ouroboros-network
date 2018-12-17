@@ -105,9 +105,9 @@ submitTx :: Trace IO -> NodeId -> Mock.Tx -> IO ()
 submitTx trace n tx = do
     withTxPipe n WriteMode False $ \hdl -> do
         let x = error "submitTx: this handle wasn't supposed to be used"
-        runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ())
+        bracketObserveIO trace "" (runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ()))
     logInfo trace $ "The Id for this transaction is: " <> pack (condense (H.hash @ShortHash tx))
-    threadDelay 1000 -- close scribes (finalizer) needed to flush the queues.
+    threadDelay 100000 -- close scribes (finalizer) needed to flush the queues.
   where
       proto :: Protocol Mock.Tx Void ()
       proto = sendMsg tx
