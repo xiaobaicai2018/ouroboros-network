@@ -10,10 +10,13 @@ SBMTCOMMAND="cd ${CWD}; cabal new-run demo-playground -- submit -t ${BP}/simple-
 
 NODE=0
 xterm -name "node${NODE}" -geometry $XGEOM -e "${NODECOMMAND} ${NODE} -l ${BP}/log-config-${NODE}.yaml" &
-NODE=1
-xterm -name "node${NODE}" -geometry $XGEOM -e "${NODECOMMAND} ${NODE} -l ${BP}/log-config-${NODE}.yaml" &
+sleep 1
 NODE=2
 xterm -name "node${NODE}" -geometry $XGEOM -e "${NODECOMMAND} ${NODE} -l ${BP}/log-config-${NODE}.yaml" &
+sleep 1
+NODE=1
+xterm -name "node${NODE}" -geometry $XGEOM -e "${NODECOMMAND} ${NODE} -l ${BP}/log-config-${NODE}.yaml" &
+sleep 1
 
 
 echo "open localhost:12788"
