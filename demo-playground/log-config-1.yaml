@@ -16,7 +16,6 @@ setupBackends:
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  - EKGViewBK
 
 # if wanted, the GUI is listening on this port:
 # hasGUI: 18321
