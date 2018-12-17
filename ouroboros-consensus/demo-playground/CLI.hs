@@ -30,6 +30,7 @@ data CLI = CLI {
   , slotDuration :: Double
   , protocol     :: Some DemoProtocol
   , command      :: Command
+  , configFile   :: FilePath
   }
 
 data Command =
@@ -42,6 +43,7 @@ parseCLI = CLI
     <*> parseSlotDuration
     <*> parseProtocol
     <*> parseCommand
+    <*> parseLogConfig
 
 parseSystemStart :: Parser UTCTime
 parseSystemStart = option auto (long "system-start" <>
@@ -94,3 +96,13 @@ parseTopologyFile =
 
 parseTopologyInfo :: Parser TopologyInfo
 parseTopologyInfo = TopologyInfo <$> parseNodeId <*> parseTopologyFile
+
+parseLogConfig :: Parser FilePath
+parseLogConfig =
+    strOption (
+            long "logconfig"
+         <> short 'l'
+         <> metavar "FILEPATH"
+         <> help "The path to a log configuration file."
+    )
+

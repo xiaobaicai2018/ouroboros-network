@@ -9,7 +9,7 @@ module Run (
 
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.STM (TBQueue, atomically, newTBQueue,
-                     newTVar)
+                     newTVar, readTVar, writeTVar)
 import           Control.Monad
 import           Control.Monad.ST (stToIO)
 import           Control.Monad.Trans
@@ -21,7 +21,6 @@ import           Data.Text (pack)
 
 import           Protocol.Codec (hoistCodec)
 
-import           Cardano.BM.Configuration.Static (defaultConfigStdout)
 import           Cardano.BM.Data.Trace (Trace)
 import           Cardano.BM.Setup (setupTrace)
 import           Cardano.BM.Trace (appendName, logNotice)
@@ -43,7 +42,7 @@ import           Ouroboros.Consensus.Util.STM
 
 import           CLI
 import           Logging
-import           Mock.Mempool (Mempool)
+import           Mock.Mempool (Mempool, collect, mempoolRemove)
 import           Mock.TxSubmission
 import           NamedPipe (DataFlow (..), NodeMapping ((:==>:)))
 import qualified NamedPipe
@@ -51,10 +50,11 @@ import           Topology
 
 runNode :: CLI -> IO ()
 runNode cli@CLI{..} = do
-    config <- defaultConfigStdout
+    -- config <- defaultConfigStdout
     -- add EKG
-    setSetupBackends config [EKGViewBK, KatipBK]
-    trace <- setupTrace (Right config) "demo-playground"
+    -- setSetupBackends config [EKGViewBK, KatipBK]
+    -- trace <- setupTrace (Right config) "demo-playground"
+    trace <- setupTrace (Left configFile) "demo-playground"
     -- different names for seperate functionalities
     submitTxTrace <- appendName "submit-tx"   trace
     nodeTrace     <- appendName "simple-node" trace
@@ -75,7 +75,7 @@ handleSimpleNode :: forall p. DemoProtocolConstraints p
 handleSimpleNode trace0 p CLI{..} (TopologyInfo myNodeId topologyFile) = do
     trace <- appendName (pack . show $ myNodeId) trace0
 
-    logNotice trace $ "System started at " <> show systemStart
+    logNotice trace $ "System started at " <> pack (show systemStart)
     topoE <- readTopologyFile topologyFile
     case topoE of
          Left e -> error e

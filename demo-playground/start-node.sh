@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 
+set -x
+
 # Turbohack to clean up the resources.
 trap ctrl_c INT
 
@@ -19,3 +21,4 @@ fi
 cabal new-run demo-playground -- \
     --system-start "$now" --slot-duration 2 $1 \
     node -t demo-playground/simple-topology.json -n $2 \
+    -l demo-playground/log-config-$2.yaml
