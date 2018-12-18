@@ -7,6 +7,7 @@ module Run (
       runNode
     ) where
 
+import           Control.Concurrent (threadDelay)
 import qualified Control.Concurrent.Async as Async
 import           Control.Concurrent.STM (TBQueue, atomically, newTBQueue,
                      newTVar, readTVar, writeTVar)
@@ -27,6 +28,7 @@ import           Cardano.BM.Data.Observable (ObservableInstance (..))
 import           Cardano.BM.Data.SubTrace (SubTrace (..))
 import           Cardano.BM.Data.Trace (Trace, TraceContext (..))
 import           Cardano.BM.Observer.Monadic (bracketObserveM)
+import           Cardano.BM.Output.Switchboard (unrealize)
 import           Cardano.BM.Setup (setupTrace)
 import           Cardano.BM.Trace (appendName, logNotice)
 
@@ -70,6 +72,11 @@ runNode cli@CLI{..} = do
             case protocol of
               Some p -> case demoProtocolConstraints p of
                            Dict -> handleSimpleNode nodeTrace p cli topology
+
+    threadDelay 1000
+    logNotice trace "exiting..."
+    -- close scribes (finalizer) needed to flush the queues.
+    unrealize $ switchboard ctx
   where
     observablesSet = fromList [MonotonicClock, MemoryStats]
 

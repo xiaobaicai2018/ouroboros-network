@@ -107,7 +107,6 @@ submitTx trace n tx = do
         let x = error "submitTx: this handle wasn't supposed to be used"
         bracketObserveIO trace "" (runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ()))
     logInfo trace $ "The Id for this transaction is: " <> pack (condense (H.hash @ShortHash tx))
-    threadDelay 100000 -- close scribes (finalizer) needed to flush the queues.
   where
       proto :: Protocol Mock.Tx Void ()
       proto = sendMsg tx
