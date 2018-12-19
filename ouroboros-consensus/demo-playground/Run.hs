@@ -18,7 +18,6 @@ import           Crypto.Random
 import qualified Data.Map.Strict as M
 import           Data.Maybe
 import           Data.Semigroup ((<>))
-import           Data.Set (fromList)
 import           Data.Text (pack)
 
 import           Protocol.Codec (hoistCodec)
@@ -27,10 +26,9 @@ import qualified Cardano.BM.Configuration.Model as CM
 import           Cardano.BM.Data.Observable (ObservableInstance (..))
 import           Cardano.BM.Data.SubTrace (SubTrace (..))
 import           Cardano.BM.Data.Trace (Trace, TraceContext (..))
-import           Cardano.BM.Observer.Monadic (bracketObserveM)
 import           Cardano.BM.Output.Switchboard (unrealize)
 import           Cardano.BM.Setup (setupTrace)
-import           Cardano.BM.Trace (appendName, logNotice)
+import           Cardano.BM.Trace (appendName, logNotice, subTrace)
 
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Chain (pointHash)
@@ -78,7 +76,7 @@ runNode cli@CLI{..} = do
     -- close scribes (finalizer) needed to flush the queues.
     unrealize $ switchboard ctx
   where
-    observablesSet = fromList [MonotonicClock, MemoryStats]
+    observablesSet = [MonotonicClock, MemoryStats]
 
 -- | Setups a simple node, which will run the chain-following protocol and,
 -- if core, will also look at the mempool when trying to create a new block.
@@ -86,12 +84,13 @@ handleSimpleNode :: forall p. DemoProtocolConstraints p
                  => Trace IO -> DemoProtocol p -> CLI -> TopologyInfo -> IO ()
 handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) = do
     let nodeIdText = pack . show $ myNodeId
+    mempoolTrace0 <- appendName "mempool-listener" trace0
     CM.setSubTrace
         (configuration ctx)
-        ("demo-playground.simple-node." <> nodeIdText <> ".forgeBlock")
-        (Just $ ObservableTrace $ fromList [MonotonicClock])
-
-    trace <- appendName nodeIdText trace0
+        ("demo-playground.simple-node.mempool-listener." <> nodeIdText <> ".read-incoming-Tx")
+        (Just $ ObservableTrace $ [MonotonicClock])
+    trace        <- appendName nodeIdText trace0
+    mempoolTrace <- appendName nodeIdText mempoolTrace0
 
     logNotice trace $ "System started at " <> pack (show systemStart)
     topoE <- readTopologyFile topologyFile
@@ -142,7 +141,7 @@ handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) 
                                   lift . lift $ writeTVar nodeMempool mp'
                                   return ts
 
-                        bracketObserveM trace "forgeBlock" Mock.forgeBlock pInfoConfig
+                        Mock.forgeBlock pInfoConfig
                                         slot
                                         curNo
                                         prevHash
@@ -168,8 +167,7 @@ handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) 
 
              -- Spawn the thread which listens to the mempool.
              mempoolThread <-
-                     spawnMempoolListener myNodeId nodeMempool kernelHandle
-
+                     spawnMempoolListener mempoolTrace myNodeId nodeMempool kernelHandle
 
              forM_ (producers nodeSetup) (addUpstream kernelHandle)
              forM_ (consumers nodeSetup) (addDownstream kernelHandle)

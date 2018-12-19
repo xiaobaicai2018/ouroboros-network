@@ -111,12 +111,13 @@ submitTx trace n tx = do
       proto :: Protocol Mock.Tx Void ()
       proto = sendMsg tx
 
-readIncomingTx :: TVar IO (Mempool Mock.Tx)
+readIncomingTx :: Trace IO
+               -> TVar IO (Mempool Mock.Tx)
                -> NodeKernel IO NodeId (Mock.SimpleBlock p c)
                -> Protocol Void Mock.Tx ()
-readIncomingTx poolVar kernel = do
+readIncomingTx trace poolVar kernel = do
     newTx <- recvMsg
-    liftIO $ atomically $ do
+    liftIO $ bracketObserveIO trace "read-incoming-Tx" $ atomically $ do
         l <- getExtLedgerState kernel
         mempool <- readTVar poolVar
         isConsistent <- runExceptT $ consistent (Mock.slsUtxo . ledgerState $ l) mempool newTx
@@ -125,22 +126,23 @@ readIncomingTx poolVar kernel = do
             Right ()  -> writeTVar poolVar (mempoolInsert newTx mempool)
     liftIO $ threadDelay 1000
     -- Loop over
-    readIncomingTx poolVar kernel
+    readIncomingTx trace poolVar kernel
 
 
 instance Serialise Void where
     encode = error "You cannot encode Void."
     decode = error "You cannot decode Void."
 
-spawnMempoolListener :: NodeId
+spawnMempoolListener :: Trace IO
+                     -> NodeId
                      -> TVar IO (Mempool Mock.Tx)
                      -> NodeKernel IO NodeId (Mock.SimpleBlock p c)
                      -> IO (Async.Async ())
-spawnMempoolListener myNodeId poolVar kernel = do
+spawnMempoolListener trace myNodeId poolVar kernel = do
     Async.async $ do
         -- Apparently I have to pass 'ReadWriteMode' here, otherwise the
         -- node will die prematurely with a (DeserialiseFailure 0 "end of input")
         -- error.
         withTxPipe myNodeId ReadWriteMode True $ \hdl -> do
             let x = error "spawnMempoolListener: this handle shouldn't have been used"
-            runProtocolWithPipe hdl x (readIncomingTx poolVar kernel)
+            runProtocolWithPipe hdl x (readIncomingTx trace poolVar kernel)
