@@ -36,8 +36,7 @@ data LogEvent = LogEvent {
 showNetworkTraffic :: TBQueue LogEvent -> Trace IO -> IO ()
 showNetworkTraffic q trace = forever $ do
     LogEvent{..} <- atomically $ readTBQueue q
-    -- Add an extra newline to help readability.
-    logInfo trace $ pack msg <> "\n"
+    logInfo trace $ pack msg
 
 instance Condense BlockHeader where
     condense BlockHeader{..} =
