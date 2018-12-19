@@ -89,6 +89,10 @@ handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) 
         (configuration ctx)
         ("demo-playground.simple-node.mempool-listener." <> nodeIdText <> ".read-incoming-Tx")
         (Just $ ObservableTrace $ [MonotonicClock])
+    CM.setSubTrace
+        (configuration ctx)
+        ("demo-playground.simple-node." <> nodeIdText <> ".validation")
+        (Just $ ObservableTrace $ [MonotonicClock])
     trace        <- appendName nodeIdText trace0
     mempoolTrace <- appendName nodeIdText mempoolTrace0
 
@@ -157,7 +161,8 @@ handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) 
 
 
              kernelHandle <-
-                 nodeKernel pInfoConfig
+                 nodeKernel trace
+                            pInfoConfig
                             pInfoInitState
                             (simMonadPseudoRandomT randomnessSource)
                             blockchainTime

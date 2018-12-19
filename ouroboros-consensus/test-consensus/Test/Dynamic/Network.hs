@@ -101,6 +101,7 @@ broadcastNetwork btime numCoreNodes pInfo initRNG numSlots = do
             }
 
       node <- nodeKernel
+                (error "not IMPLEMENTED yet")
                 pInfoConfig
                 pInfoInitState
                 (simMonadPseudoRandomT varRNG)

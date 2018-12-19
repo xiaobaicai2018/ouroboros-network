@@ -2,6 +2,7 @@
 {-# LANGUAGE FlexibleContexts           #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE OverloadedStrings          #-}
 {-# LANGUAGE RankNTypes                 #-}
 {-# LANGUAGE RecordWildCards            #-}
 {-# LANGUAGE ScopedTypeVariables        #-}
@@ -42,6 +43,9 @@ import qualified Data.Map.Strict as Map
 import           Data.Maybe (fromMaybe)
 import           Data.Text (Text)
 import           Data.Time
+
+import           Cardano.BM.Data.Trace (Trace)
+import           Ouroboros.Util.STM (bracketObserve)
 
 import           Protocol.Channel
 import           Protocol.Codec
@@ -194,12 +198,14 @@ data NodeCallbacks m rndT b = NodeCallbacks {
 
 nodeKernel :: forall m (rndT :: (* -> *) -> (* -> *)) b up.
               ( MonadSTM m
+              , MonadSay m
               , MonadRandom (rndT (Tr m))
               , ProtocolLedgerView b
               , Eq b
               , Ord up
               )
-           => NodeConfig (BlockProtocol b)
+           => Trace IO
+           -> NodeConfig (BlockProtocol b)
            -> NodeState (BlockProtocol b)
            -> (forall m'. Sim m' m -> Sim (rndT m') m)
            -- ^ Provide access to a random number generator
@@ -208,7 +214,7 @@ nodeKernel :: forall m (rndT :: (* -> *) -> (* -> *)) b up.
            -> Chain b
            -> NodeCallbacks m rndT b
            -> m (NodeKernel m up b)
-nodeKernel cfg initState simRnd btime initLedger initChain NodeCallbacks{..} = do
+nodeKernel trace cfg initState simRnd btime initLedger initChain NodeCallbacks{..} = do
     stateVar    <- atomically $ newTVar initState
     ourChainVar <- atomically $ newTVar initChain
     updatesVar  <- atomically $ newTBQueue 64
@@ -261,7 +267,8 @@ nodeKernel cfg initState simRnd btime initLedger initChain NodeCallbacks{..} = d
     fork $ forever $ do
          newChain <- atomically $ readTBQueue updatesVar
          -- ... validating ... mumble mumble mumble ...
-         atomically $ do
+         --  atomically $ do
+         bracketObserve trace "validation" $ do
            slot     <- getCurrentSlot btime
            ourChain <- readTVar ourChainVar
            -- Check: do we still want this chain? (things might have changed)

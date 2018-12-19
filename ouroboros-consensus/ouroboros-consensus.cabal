@@ -64,6 +64,8 @@ library
                        Ouroboros.Consensus.Util.Singletons
                        Ouroboros.Consensus.Util.STM
 
+                       Ouroboros.Util.STM
+
                        -- Storing things on disk
                        Ouroboros.Storage.Immutable.DB
                        Ouroboros.Storage.FS.Class
@@ -121,6 +123,7 @@ library
                        directory         >=1.3   && <1.4,
                        exceptions        >=0.10  && <0.11,
                        filepath          >=1.4   && <1.5,
+                       iohk-monitoring,
                        memory            >=0.14  && <0.15,
                        mtl               >=2.2   && <2.3,
                        serialise         >=0.2   && <0.3,
@@ -194,6 +197,7 @@ test-suite test-consensus
 
                     containers,
                     cryptonite,
+                    iohk-monitoring,
                     mtl,
                     QuickCheck,
                     serialise,
