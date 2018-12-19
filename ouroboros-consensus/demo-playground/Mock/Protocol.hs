@@ -110,7 +110,7 @@ runProtocolWithPipe :: forall smsg rmsg.
                     -> Handle
                     -> Protocol smsg rmsg ()
                     -> IO ()
-runProtocolWithPipe hndRead hndWrite p =
+runProtocolWithPipe hndRead hndWrite p = do
     unProtocol p >>= go mempty
   where
     go trailing (Send msg k) = do
