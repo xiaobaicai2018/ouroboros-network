@@ -68,6 +68,7 @@ library
                        Ouroboros.Storage.Immutable.DB
                        Ouroboros.Storage.FS.Class
                        Ouroboros.Storage.FS.Sim
+                       Ouroboros.Storage.FS.Sim.FsTree
                        Ouroboros.Storage.FS.IO
                        Ouroboros.Storage.Util
                        Ouroboros.Storage.IO
