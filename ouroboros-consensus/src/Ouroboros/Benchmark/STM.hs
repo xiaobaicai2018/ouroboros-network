@@ -1,4 +1,4 @@
-module Ouroboros.Util.STM
+module Ouroboros.Benchmark.STM
     (
       bracketObserve
     ) where

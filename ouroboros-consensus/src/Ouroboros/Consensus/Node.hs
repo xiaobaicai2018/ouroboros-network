@@ -45,7 +45,7 @@ import           Data.Text (Text)
 import           Data.Time
 
 import           Cardano.BM.Data.Trace (Trace)
-import           Ouroboros.Util.STM (bracketObserve)
+import           Ouroboros.Benchmark.STM (bracketObserve)
 
 import           Protocol.Channel
 import           Protocol.Codec

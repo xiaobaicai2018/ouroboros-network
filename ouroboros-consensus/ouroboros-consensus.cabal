@@ -64,7 +64,7 @@ library
                        Ouroboros.Consensus.Util.Singletons
                        Ouroboros.Consensus.Util.STM
 
-                       Ouroboros.Util.STM
+                       Ouroboros.Benchmark.STM
 
                        -- Storing things on disk
                        Ouroboros.Storage.Immutable.DB
