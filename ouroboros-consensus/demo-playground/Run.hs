@@ -92,7 +92,7 @@ handleSimpleNode trace0@(ctx, _) p CLI{..} (TopologyInfo myNodeId topologyFile) 
     CM.setSubTrace
         (configuration ctx)
         ("demo-playground.simple-node." <> nodeIdText <> ".validation")
-        (Just $ ObservableTrace $ [MonotonicClock])
+        (Just $ ObservableTrace $ [MonotonicClock, IOStats])
     trace        <- appendName nodeIdText trace0
     mempoolTrace <- appendName nodeIdText mempoolTrace0
 
