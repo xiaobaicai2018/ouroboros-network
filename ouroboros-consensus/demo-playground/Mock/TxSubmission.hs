@@ -105,7 +105,8 @@ submitTx :: Trace IO -> NodeId -> Mock.Tx -> IO ()
 submitTx trace n tx = do
     withTxPipe n WriteMode False $ \hdl -> do
         let x = error "submitTx: this handle wasn't supposed to be used"
-        bracketObserveIO trace "" (runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ()))
+        bracketObserveIO trace "" $
+            runProtocolWithPipe x hdl proto `catch` (\ProtocolStopped -> return ())
     logInfo trace $ "The Id for this transaction is: " <> pack (condense (H.hash @ShortHash tx))
   where
       proto :: Protocol Mock.Tx Void ()
