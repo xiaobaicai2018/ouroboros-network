@@ -9,14 +9,13 @@ rotation:
 
 # these backends are initialized:
 setupBackends:
-#  - AggregationBK
+  - AggregationBK
   - EKGViewBK
   - KatipBK
 
 # if not indicated otherwise, then messages are passed to these backends:
 defaultBackends:
   - KatipBK
-  - AggregationBK
 
 # if wanted, the GUI is listening on this port:
 # hasGUI: 18321
@@ -39,3 +38,6 @@ defaultScribes:
 options:
   cfokey:
     value: "Release-1.0.0"
+  mapBackends:
+    demo-playground.simple-node.CoreId 0.validation:
+      - AggregationBK
