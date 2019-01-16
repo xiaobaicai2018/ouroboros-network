@@ -98,9 +98,6 @@ instance (MonadFork (SimFS m) , MonadSTM m) => MonadSTM (SimFS m) where
   newTBQueue        = lift . newTBQueue
   readTBQueue       = lift . readTBQueue
   writeTBQueue    q = lift . writeTBQueue q
-#if MIN_VERSION_stm(2,5,0)
-  lengthTBQueue     = lift . lengthTBQueue
-#endif
 
 instance (MonadMask m, MonadSTM m) => HasFS (SimFSE m) where
     type FsHandle (SimFSE m) = Mock.Handle
