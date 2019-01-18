@@ -1,4 +1,5 @@
 ﻿resolver: lts-13.3
+compiler: ghc-8.4.4
 packages:
 - ouroboros-consensus/
 flags: {}

@@ -27,6 +27,9 @@
         clock = ./.stack.nix/clock.nix;
         transformers = ./.stack.nix/transformers.nix;
         };
+      compiler.version = "8.4.4";
+      compiler.nix-name = "ghc844";
       };
   resolver = "lts-13.3";
+  compiler = "ghc-8.4.4";
   }
