@@ -12,10 +12,12 @@
 ############################################################################
 
 let
-  iohkLib = import ./nix/iohk-common.nix { application = "ouroboros-network"; };
-  pkgs = iohkLib.pkgs;
-
-in { supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
+  iohkLib = import ./nix/iohk-common.nix {};
+in {
+    system ? builtins.currentSystem
+  , config ? {}
+  , pkgs ? iohkLib.pkgs
+  , supportedSystems ? [ "x86_64-linux" "x86_64-darwin" ]
   , scrubJobs ? true
   , ouroboros-network ? { outPath = ./.; rev = "abcdef"; }
   , nixpkgsArgs ? {

@@ -12,7 +12,7 @@
 , config ? {}
 
 # Import IOHK common nix lib and pinned nixpkgs
-, iohkLib ? import ./nix/iohk-common.nix { inherit system crossSystem config; application = "ouroboros-network"; }
+, iohkLib ? import ./nix/iohk-common.nix { inherit system crossSystem config; }
 , pkgs ? iohkLib.pkgs
 
 # Keep this argument even if unused.
