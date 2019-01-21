@@ -115,18 +115,10 @@ let
           # remote-iserv however needs to come from the regular packages as it has to
           # run on the target host.
           inherit (packages.remote-iserv.components.exes) remote-iserv;
-          # we need to use openssl.bin here, because the .dll's are in the .bin expression.
-          extra-test-libs = [ pkgs.rocksdb pkgs.openssl.bin ];
         } // { doCrossCheck = true; };
-       in lib.optionalAttrs pkgs'.stdenv.hostPlatform.isWindows  {
-         packages.ouroboros-network   = withTH;
-         packages.ouroboros-consensus = withTH;
-         packages.typed-transitions   = withTH;
-         packages.io-sim              = withTH;
-         packages.io-sim-classes      = withTH;
-         packages.iohk-monitoring     = withTH;
-         packages.katip               = withTH;
-      })
+       in lib.optionalAttrs pkgs'.stdenv.hostPlatform.isWindows  
+         (lib.mapAttrs (p: _: withTH) packages)
+      )
 
       # Packages we wish to ignore version bounds of.
       # This is similar to jailbreakCabal, however it

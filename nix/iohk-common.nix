@@ -18,5 +18,4 @@ import (
       inherit (spec) sha256;
     }) {
       inherit system crossSystem config;
-      nixpkgsJsonOverride = ./nixpkgs-src.json;
     }
