@@ -66,7 +66,7 @@ let
       (import ./ghc-custom/default.nix)
       (hackage: {
           hsc2hs = hackage.hsc2hs."0.68.4".revisions.default;
-          # stackage 12.17 beautifully omits the Win32 pkg
+          # stackage beautifully omits the Win32 pkg
           Win32 = hackage.Win32."2.6.2.0".revisions.default;
       })
     ];
@@ -116,9 +116,25 @@ let
           # run on the target host.
           inherit (packages.remote-iserv.components.exes) remote-iserv;
         } // { doCrossCheck = true; };
-       in lib.optionalAttrs pkgs'.stdenv.hostPlatform.isWindows  
-         (lib.mapAttrs (p: _: withTH) packages)
-      )
+      in lib.optionalAttrs pkgs'.stdenv.hostPlatform.isWindows  {
+        # list from `stack dot --external | grep "template-haskell"`
+        packages.QuickCheck      = withTH;
+        packages.aeson           = withTH;
+        packages.bifunctors      = withTH;
+        packages.exceptions      = withTH;
+        packages.free            = withTH;
+        packages.half            = withTH;
+        packages.invariant       = withTH;
+        packages.iohk-monitoring = withTH;
+        packages.katip           = withTH;
+        packages.lens            = withTH;
+        packages.microlens-th    = withTH;
+        packages.reflection      = withTH;
+        packages.semigroupoids   = withTH;
+        packages.tagged          = withTH;
+        packages.th-abstraction  = withTH;
+        packages.yaml            = withTH;
+      })
 
       # Packages we wish to ignore version bounds of.
       # This is similar to jailbreakCabal, however it

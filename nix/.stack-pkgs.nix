@@ -17,6 +17,8 @@
         "quickcheck-state-machine" = (((hackage.quickcheck-state-machine)."0.6.0").revisions).default;
         "time-units" = (((hackage.time-units)."1.0.0").revisions).default;
         "process" = (((hackage.process)."1.6.5.0").revisions).default;
+        "containers" = (((hackage.containers)."0.5.11.0").revisions).default;
+        "network" = (((hackage.network)."2.6.3.6").revisions).default;
         } // {
         ouroboros-consensus = ./.stack.nix/ouroboros-consensus.nix;
         typed-transitions = ./.stack.nix/typed-transitions.nix;

@@ -25,6 +25,8 @@ extra-deps:
 - quickcheck-state-machine-0.6.0
 - time-units-1.0.0
 - process-1.6.5.0
+- containers-0.5.11.0
+- network-2.6.3.6
 - git: https://github.com/input-output-hk/iohk-monitoring-framework
   commit: e53ea548a8d75de01e45d703a5c1afa6846d2daf
 - git: https://github.com/corsis/clock.git
