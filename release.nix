@@ -58,12 +58,11 @@ let
   requiredJobs = {
     required = pkgs.lib.hydraJob (pkgs.releaseTools.aggregate {
       name = "ouroboros-required-checks";
-      constituents = [(lib.collect lib.isDerivation jobs)] ++ 
-        [(lib.collect lib.isDerivation crossJobs)];
+      constituents = [(lib.collect lib.isDerivation jobs)];
     });
   };
 
 
 
 in
-  jobs // requiredJobs // { cross = crossJobs; }
+  jobs // requiredJobs
