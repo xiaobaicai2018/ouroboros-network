@@ -30,4 +30,7 @@ in {
 
   inherit (haskellPackages.ouroboros-consensus.components)
     benchmarks exes library tests;
+  
+  inherit (iohkLib.nix-tools)
+    regeneratePackages;
 }

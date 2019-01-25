@@ -45,6 +45,7 @@ let
 
   jobs = mapTestOn {
     exes.demo-playground =  supportedSystems;
+    regeneratePackages =  supportedSystems;
   } // testJobs;
 
   crossJobs = mapTestOnCross lib.systems.examples.mingwW64 {
