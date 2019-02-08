@@ -1,10 +1,10 @@
+{-# LANGUAGE BangPatterns        #-}
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE FlexibleContexts    #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TupleSections       #-}
 {-# LANGUAGE TypeOperators       #-}
 {-# LANGUAGE RankNTypes          #-}
-{-# LANGUAGE GADTs               #-}
 
 module Test.Ouroboros.Network.Node where
 
@@ -26,6 +26,8 @@ import           Data.Sequence (Seq)
 import qualified Data.Sequence as Seq
 import           Data.Tuple (swap)
 import           Data.Void (Void)
+
+import           Debug.Trace (traceM)
 
 import           Test.QuickCheck
 import           Test.Tasty (TestTree, testGroup)
@@ -51,22 +53,22 @@ import           Ouroboros.Network.Protocol.Chain.Node
 tests :: TestTree
 tests =
   testGroup "Node"
-  [ testGroup "fixed graph topology"
-    [ testProperty "core -> relay" prop_coreToRelay
-    , testProperty "core -> relay -> relay" prop_coreToRelay2
-    , testProperty "core <-> relay <-> core" $ prop_coreToCoreViaRelay
-    ]
-  , testProperty "arbtirary node graph" (withMaxSuccess 50 prop_networkGraph)
-  , testProperty "blockGenerator invariant SimM" prop_blockGenerator_ST
-  , testProperty "blockGenerator invariant IO" prop_blockGenerator_IO
-  , testProperty "consensus in arbitrary graph" $
-      -- We need a common genesis block, or we actually would not expect
-      -- consensus to be reached.
-      let genesis = BlockHeader (HeaderHash 0) (BlockHash (ConcreteBlock.HeaderHash 0)) (Slot 0) (BlockNo 0) (BlockSigner 0) (BodyHash 0)
-          graphGen = resize 42 genConnectedBidirectionalGraph
-          nameGen = pure . show
-          chainGen = const (resize 42 (genNonEmptyHeaderChain genesis))
-      in  forAll (genStaticNetDesc graphGen nameGen chainGen) prop_consensus
+--   [ testGroup "fixed graph topology"
+--     [ testProperty "core -> relay" prop_coreToRelay
+--     , testProperty "core -> relay -> relay" prop_coreToRelay2
+--     , testProperty "core <-> relay <-> core" $ prop_coreToCoreViaRelay
+--     ]
+--   , testProperty "arbtirary node graph" (withMaxSuccess 50 prop_networkGraph)
+  [ testProperty "blockGenerator invariant SimM" prop_blockGenerator_ST
+--   [ testProperty "blockGenerator invariant IO" prop_blockGenerator_IO
+--   , testProperty "consensus in arbitrary graph" $
+--       -- We need a common genesis block, or we actually would not expect
+--       -- consensus to be reached.
+--       let genesis = BlockHeader (HeaderHash 0) (BlockHash (ConcreteBlock.HeaderHash 0)) (Slot 0) (BlockNo 0) (BlockSigner 0) (BodyHash 0)
+--           graphGen = resize 42 genConnectedBidirectionalGraph
+--           nameGen = pure . show
+--           chainGen = const (resize 42 (genNonEmptyHeaderChain genesis))
+--       in  forAll (genStaticNetDesc graphGen nameGen chainGen) prop_consensus
   ]
 
 
@@ -88,7 +90,11 @@ test_blockGenerator
   => Chain Block
   -> Duration (Time m)
   -> n Property
-test_blockGenerator chain slotDuration = isValid <$> withProbe (experiment slotDuration)
+test_blockGenerator chain slotDuration = do
+    traceM $ "\nStarting ...\n"
+    list <- withProbe (experiment slotDuration)
+    !() <- traceM $ "length: " ++ (show $ length list)
+    return $ isValid list
   where
     isValid :: [(Time m, Block)] -> Property
     isValid = foldl'
@@ -105,7 +111,8 @@ test_blockGenerator chain slotDuration = isValid <$> withProbe (experiment slotD
       -> m ()
     experiment slotDur p = do
       getBlock <- blockGenerator slotDur (Chain.toOldestFirst chain)
-      fork $ go getBlock
+    --   fork $ go getBlock
+      go getBlock
      where
       go getBlock = do
         mb <- atomically $ getBlock
@@ -314,7 +321,7 @@ coreToCoreViaRelaySim chain1 chain2 slotDuration coreTrDelay relayTrDelay probe 
     cps <- coreNode (CoreId 2) slotDuration (Chain.toOldestFirst chain2) c2r1
     fork $ observeChainProducerState (CoreId 2) probe cps
     checkTermination donevar cps lastSlot lastBlockBody
-    
+
   -- wait until all the nodes are ready
   atomically $ readTVar donevar >>= check . (>=3)
  where
@@ -582,7 +589,7 @@ genNonEmptyHeaderChain genesis = do
 -- genesis block built-in implicitly. The latter requires a
 -- 'NonEmpty BlockHeader' for _each_ node, which morally should always be
 -- possible because every node must have _a_ genesis block, and there is no
--- one true genesis block. 
+-- one true genesis block.
 genStaticNetDesc
   :: forall m .
      ( Applicative m )

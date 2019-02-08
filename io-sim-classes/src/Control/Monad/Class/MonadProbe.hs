@@ -14,6 +14,7 @@ import qualified Control.Concurrent.STM.TVar as STM
 import           Control.Monad.Class.MonadSTM (atomically)
 import           Control.Monad.Class.MonadTimer (Time, getMonotonicTime)
 
+import Debug.Trace (traceM)
 
 type ProbeTrace m a = [(Time m, a)]
 
@@ -46,6 +47,7 @@ instance MonadProbe IO where
     t <- getMonotonicTime
     -- the user is not exposed to the inner TVar, so it should never block for
     -- too long.
+    -- traceM "}} payload: " -- ++ show a
     atomically $ STM.modifyTVar' p ((t,a):)
 
   -- In the above the starting state is pending, there is only one transaction
