@@ -13,6 +13,7 @@ import qualified Ouroboros.Network.Protocol.ChainSync.Test (tests)
 import qualified Ouroboros.Network.Protocol.BlockFetch.Test (tests)
 import qualified Ouroboros.Network.Protocol.PingPong.Test (tests)
 import qualified Ouroboros.Network.Protocol.ReqResp.Test (tests)
+import qualified Ouroboros.Network.Protocol.TxSubmission.Test (tests)
 import qualified Test.Socket (tests)
 
 main :: IO ()
@@ -33,4 +34,5 @@ tests =
   , Ouroboros.Network.Protocol.BlockFetch.Test.tests
   , Ouroboros.Network.Protocol.PingPong.Test.tests
   , Ouroboros.Network.Protocol.ReqResp.Test.tests
+  , Ouroboros.Network.Protocol.TxSubmission.Test.tests
   ]
