@@ -76,6 +76,10 @@ library
                        Ouroboros.Storage.FS.Sim.MockFS
                        Ouroboros.Storage.FS.Sim.Pure
                        Ouroboros.Storage.FS.Sim.STM
+                       Ouroboros.Storage.ChainDB.API
+                       Ouroboros.Storage.ChainDB.Impl
+                       Ouroboros.Storage.ChainDB.MemoryDB
+                       Ouroboros.Storage.ChainDB.Types
                        Ouroboros.Storage.ImmutableDB
                        Ouroboros.Storage.ImmutableDB.API
                        Ouroboros.Storage.ImmutableDB.CumulEpochSizes
