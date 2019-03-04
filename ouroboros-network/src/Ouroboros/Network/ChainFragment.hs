@@ -35,6 +35,7 @@ module Ouroboros.Network.ChainFragment (
   fromOldestFirst,
   dropNewest,
   dropOldest,
+  takeNewest,
   length,
   null,
 
@@ -256,6 +257,16 @@ dropOldest :: HasHeader block
            -> ChainFragment block -> ChainFragment block
 dropOldest n (ChainFragment c) =
     ChainFragment $ FT.dropUntil (\v -> bmSize v > n) c
+
+-- | \( O(\log(\min(i,n-i)) \). Take the @n@ newest blocks from the
+-- 'ChainFragment'.
+takeNewest :: HasHeader block
+         => Int  -- ^ @n@
+         -> ChainFragment block -> ChainFragment block
+takeNewest n cf@(ChainFragment c) =
+    ChainFragment $ FT.dropUntil (\v -> bmSize v > remainingLength) c
+  where
+    remainingLength = length cf - n
 
 -- | \( O(1) \).
 length :: HasHeader block => ChainFragment block -> Int

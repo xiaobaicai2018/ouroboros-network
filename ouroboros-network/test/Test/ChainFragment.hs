@@ -80,6 +80,7 @@ tests = testGroup "ChainFragment"
   , testProperty "toList/head"                               prop_toList_head
   , testProperty "dropNewest"                                prop_dropNewest
   , testProperty "dropOldest"                                prop_dropOldest
+  , testProperty "takeNewest"                                prop_takeNewest
   , testProperty "addBlock"                                  prop_addBlock
   , testProperty "rollback"                                  prop_rollback
   , testProperty "rollback/head"                             prop_rollback_head
@@ -141,6 +142,12 @@ prop_dropOldest :: TestBlockChainFragment -> Bool
 prop_dropOldest (TestBlockChainFragment chain) =
     let blocks = CF.toOldestFirst chain in
     and [ CF.dropOldest n chain == CF.fromOldestFirst (L.drop n blocks)
+        | n <- [0..Prelude.length blocks] ]
+
+prop_takeNewest :: TestBlockChainFragment -> Bool
+prop_takeNewest (TestBlockChainFragment chain) =
+    let blocks = CF.toNewestFirst chain in
+    and [ CF.takeNewest n chain == CF.fromNewestFirst (L.take n blocks)
         | n <- [0..Prelude.length blocks] ]
 
 prop_addBlock :: TestAddBlock -> Bool
