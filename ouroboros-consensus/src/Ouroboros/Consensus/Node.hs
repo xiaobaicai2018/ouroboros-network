@@ -138,6 +138,7 @@ nodeKernel :: forall m blk up.
               , MonadFork m
               , MonadSay m
               , ProtocolLedgerView blk
+              , LedgerConfigView blk
               , Eq                 blk
               , Condense           blk
               , Ord up
@@ -184,6 +185,7 @@ initInternalState :: forall m up blk.
                      ( MonadSTM m
                      , MonadFork m
                      , ProtocolLedgerView blk
+                     , LedgerConfigView blk
                      , Eq                 blk
                      , Ord up
                      )
@@ -221,6 +223,7 @@ forkMonitorDownloads :: forall m up blk.
                         , MonadFork m
                         , MonadSay m
                         , ProtocolLedgerView blk
+                        , LedgerConfigView blk
                         , Eq                 blk
                         , Condense           blk
                         )
@@ -253,6 +256,7 @@ forkMonitorDownloads st@IS{..} =
 forkBlockProduction :: forall m up blk. (
                          MonadSTM m
                        , ProtocolLedgerView blk
+                       , LedgerConfigView blk
                        )
                     => InternalState m up blk -> m ()
 forkBlockProduction st@IS{..} =
@@ -300,6 +304,7 @@ forkBlockProduction st@IS{..} =
 adoptNewChain :: forall m up blk.
                  ( MonadSTM m
                  , ProtocolLedgerView blk
+                 , LedgerConfigView blk
                  )
               => InternalState m up blk
               -> Chain blk  -- ^ Old chain
@@ -320,6 +325,7 @@ adoptNewChain is old new =
 -- | Apply chain update
 applyUpdate :: ( MonadSTM m
                , ProtocolLedgerView blk
+               , LedgerConfigView blk
                )
             => InternalState m up blk
             -> Chain blk          -- ^ New chain
@@ -337,6 +343,7 @@ applyUpdate st@IS{..} new upd = do
 -- the updated ledger state with the candidates. Or something.
 updateLedgerState :: ( MonadSTM m
                      , ProtocolLedgerView blk
+                     , LedgerConfigView blk
                      )
                   => InternalState m up blk
                   -> Chain blk          -- ^ New chain (TODO: remove this arg)
@@ -438,6 +445,7 @@ consensusSyncClient :: forall m up blk hdr.
                        ( MonadSTM m
                        , blk ~ hdr -- for now
                        , ProtocolLedgerView hdr
+                       , LedgerConfigView blk
                        , Eq                 hdr
                        , Ord up
                        )

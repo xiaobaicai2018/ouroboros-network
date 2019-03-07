@@ -13,6 +13,7 @@ module Ouroboros.Consensus.Ledger.Abstract (
     UpdateLedger(..)
   , BlockProtocol
   , ProtocolLedgerView(..)
+  , LedgerConfigView(..)
     -- * Extended ledger state
   , ExtLedgerState(..)
   , ExtValidationError(..)
@@ -39,13 +40,15 @@ class ( Show (LedgerState b)
       ) => UpdateLedger (b :: *) where
   data family LedgerState b :: *
   data family LedgerError b :: *
+  data family LedgerConfig b :: *
 
   -- | Apply a block to the ledger state
   --
   -- TODO: We need to support rollback, so this probably won't be a pure
   -- function but rather something that lives in a monad with some actions
   -- that we can compute a "running diff" so that we can go back in time.
-  applyLedgerState :: b
+  applyLedgerState :: LedgerConfig b
+                   -> b
                    -> LedgerState b
                    -> Except (LedgerError b) (LedgerState b)
 
@@ -61,6 +64,13 @@ class ( OuroborosTag (BlockProtocol b)
   protocolLedgerView :: NodeConfig (BlockProtocol b)
                      -> LedgerState b
                      -> LedgerView (BlockProtocol b)
+
+-- | Extract the ledger environment from the node config
+class ( UpdateLedger b
+      , OuroborosTag (BlockProtocol b)
+      ) => LedgerConfigView b where
+  ledgerConfigView :: NodeConfig (BlockProtocol b)
+                   -> LedgerConfig b
 
 {-------------------------------------------------------------------------------
   Extended ledger state
@@ -83,14 +93,14 @@ data ExtValidationError b =
 
 deriving instance ProtocolLedgerView b => Show (ExtValidationError b)
 
-applyExtLedgerState :: ProtocolLedgerView b
+applyExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                     => NodeConfig (BlockProtocol b)
                     -> b
                     -> ExtLedgerState b
                     -> Except (ExtValidationError b) (ExtLedgerState b)
 applyExtLedgerState cfg b ExtLedgerState{..} = do
     ledgerState'         <- withExcept ExtValidationErrorLedger $
-                              applyLedgerState b ledgerState
+                              applyLedgerState (ledgerConfigView cfg) b ledgerState
     ouroborosChainState' <- withExcept ExtValidationErrorOuroboros $
                               applyChainState
                                 cfg
@@ -99,7 +109,7 @@ applyExtLedgerState cfg b ExtLedgerState{..} = do
                                 ouroborosChainState
     return $ ExtLedgerState ledgerState' ouroborosChainState'
 
-foldExtLedgerState :: ProtocolLedgerView b
+foldExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                    => NodeConfig (BlockProtocol b)
                    -> [b] -- ^ Blocks to apply, oldest first
                    -> ExtLedgerState b
@@ -107,7 +117,7 @@ foldExtLedgerState :: ProtocolLedgerView b
 foldExtLedgerState = repeatedlyM . applyExtLedgerState
 
 -- TODO: This should check stuff like backpointers also
-chainExtLedgerState :: ProtocolLedgerView b
+chainExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                     => NodeConfig (BlockProtocol b)
                     -> Chain b
                     -> ExtLedgerState b
@@ -115,7 +125,7 @@ chainExtLedgerState :: ProtocolLedgerView b
 chainExtLedgerState cfg = foldExtLedgerState cfg . toOldestFirst
 
 -- | Validation of an entire chain
-verifyChain :: ProtocolLedgerView b
+verifyChain :: (LedgerConfigView b, ProtocolLedgerView b)
             => NodeConfig (BlockProtocol b)
             -> ExtLedgerState b
             -> Chain b

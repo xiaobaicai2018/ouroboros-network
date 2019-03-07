@@ -343,14 +343,17 @@ instance OuroborosTag p => UpdateLedger (SimpleBlock p c) where
 
   data LedgerError (SimpleBlock p c) = LedgerErrorInvalidInputs InvalidInputs
     deriving (Show)
+  data LedgerConfig (SimpleBlock p c) = MockLedgerConfig
 
   -- Apply a block to the ledger state
-  applyLedgerState b (SimpleLedgerState u c) = do
+  applyLedgerState _ b (SimpleLedgerState u c) = do
       u' <- withExceptT LedgerErrorInvalidInputs $ updateUtxo b u
       return $ SimpleLedgerState u' (c `Set.union` confirmed b)
 
 deriving instance OuroborosTag p => Show (LedgerState (SimpleBlock p c))
 
+instance OuroborosTag p => LedgerConfigView (SimpleBlock p c) where
+  ledgerConfigView = const MockLedgerConfig
 {-------------------------------------------------------------------------------
   Support for various consensus algorithms
 -------------------------------------------------------------------------------}
