@@ -1,0 +1,40 @@
+resolver: https://raw.githubusercontent.com/input-output-hk/cardano-prelude/ff5fd5f33849be8a826506c34e5b0278f267f804/snapshot.yaml
+
+packages:
+  - ./typed-transitions
+  - ./typed-protocols
+  - ./ouroboros-network
+  - ./ouroboros-consensus
+  - ./io-sim
+  - ./io-sim-classes
+
+extra-deps:
+  - git: https://github.com/input-output-hk/iohk-monitoring-framework
+    commit: 8456e488fd26e34f0d15c957965d6cc5c51427af
+
+  - git: https://github.com/input-output-hk/cardano-chain
+    commit: 72b4a2987b119256e5ae604511795dfe37355709
+    subdirs:
+      - .
+      - crypto
+      - binary
+
+  - git: https://github.com/well-typed/cborg
+    commit: 80fbe0ee5e67a5622e2cb9eaa9d8594a2214322d
+    subdirs:
+      - cborg
+
+  - git: https://github.com/input-output-hk/cardano-prelude
+    commit: e1fb84b1a955b6e3e3e53d9022e8bc0f927417a2
+
+  - git: https://github.com/input-output-hk/cardano-crypto
+    commit: f5cecb6e424cc84f85b6a3e1f803517bb7b4cfb1
+
+  - ekg-0.4.0.15
+  - time-units-1.0.0
+  - ekg-json-0.1.0.6
+
+nix:
+  packages:
+    - zlib
+    - openssl
