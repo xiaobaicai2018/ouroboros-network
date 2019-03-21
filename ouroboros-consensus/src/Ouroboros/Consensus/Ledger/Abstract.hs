@@ -37,17 +37,25 @@ import           Ouroboros.Network.Chain (Chain, toOldestFirst)
 -- | Interaction with the ledger layer
 class ( Show (LedgerState b)
       , Show (LedgerError b)
+      , HasHeader b
       ) => UpdateLedger (b :: *) where
   data family LedgerState b :: *
   data family LedgerError b :: *
   data family LedgerConfig b :: *
+
+  -- | Apply a block header to the ledger state.
+  applyLedgerHeader :: LedgerConfig b
+                    -> b
+                    -> LedgerState b
+                    -> Except (LedgerError b) (LedgerState b)
+
 
   -- | Apply a block to the ledger state
   --
   -- TODO: We need to support rollback, so this probably won't be a pure
   -- function but rather something that lives in a monad with some actions
   -- that we can compute a "running diff" so that we can go back in time.
-  applyLedgerState :: LedgerConfig b
+  applyLedgerBlock :: LedgerConfig b
                    -> b
                    -> LedgerState b
                    -> Except (LedgerError b) (LedgerState b)
@@ -100,7 +108,7 @@ applyExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                     -> Except (ExtValidationError b) (ExtLedgerState b)
 applyExtLedgerState cfg b ExtLedgerState{..} = do
     ledgerState'         <- withExcept ExtValidationErrorLedger $
-                              applyLedgerState (ledgerConfigView cfg) b ledgerState
+                              applyLedgerBlock (ledgerConfigView cfg) b ledgerState
     ouroborosChainState' <- withExcept ExtValidationErrorOuroboros $
                               applyChainState
                                 cfg

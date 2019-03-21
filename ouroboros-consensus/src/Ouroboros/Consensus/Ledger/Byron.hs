@@ -15,6 +15,9 @@ import Ouroboros.Consensus.Ledger.Abstract
 newtype ByronBlock = ByronBlock { unByronBlock :: ABlock ByteString }
   deriving (Eq, Show)
 
+instance HasHeader ByronBlock where
+  type HeaderHash b = Hash
+
 instance UpdateLedger ByronBlock where
   newtype LedgerState ByronBlock = ByronLedgerState ChainValidationState
     deriving (Eq, Show)
@@ -22,5 +25,8 @@ instance UpdateLedger ByronBlock where
     deriving (Eq, Show)
   newtype LedgerConfig ByronBlock = ByronLedgerConfig Genesis.Config
 
-  applyLedgerState (ByronLedgerConfig cfg) (ByronBlock block) (ByronLedgerState state)
+  applyLedgerBlock (ByronLedgerConfig cfg) (ByronBlock block) (ByronLedgerState state)
     = mapExcept (bimap ByronLedgerError ByronLedgerState) $ updateBody cfg state block
+
+  applyLedgerHeader (ByronLedgerConfig cfg) (ByronBlock block) (ByronLedgerState state)
+    = mapExcept (bimap ByronLedgerError ByronLedgerState) $ updateHeader cfg state block

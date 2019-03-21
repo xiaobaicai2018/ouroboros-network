@@ -13,7 +13,7 @@ extra-deps:
     commit: 8456e488fd26e34f0d15c957965d6cc5c51427af
 
   - git: https://github.com/input-output-hk/cardano-chain
-    commit: 72b4a2987b119256e5ae604511795dfe37355709
+    commit: 37f8a0ac9aea5f45a2f85887623e8270b5fd945e
     subdirs:
       - .
       - crypto
