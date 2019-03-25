@@ -23,6 +23,7 @@ dist/
 *~
 result*
 tags
+**/TAGS
 
 .stack-work/
 *.tix
