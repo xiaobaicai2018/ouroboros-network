@@ -37,7 +37,6 @@ import           Ouroboros.Network.Chain (Chain, toOldestFirst)
 -- | Interaction with the ledger layer
 class ( Show (LedgerState b)
       , Show (LedgerError b)
-      , HasHeader b
       ) => UpdateLedger (b :: *) where
   data family LedgerState b :: *
   data family LedgerError b :: *

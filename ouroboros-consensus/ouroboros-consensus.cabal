@@ -137,7 +137,10 @@ library
 
                        base16-bytestring >=0.1   && <0.2,
                        bytestring        >=0.10  && <0.11,
-                       cardano-chain,
+                       cardano-binary,
+                       cardano-crypto-wrapper,
+                       cardano-ledger,
+                       cardano-prelude,
                        cborg             >=0.2.1 && <0.3,
                        containers        >=0.5   && <0.7,
                        cryptonite        >=0.25  && <0.26,

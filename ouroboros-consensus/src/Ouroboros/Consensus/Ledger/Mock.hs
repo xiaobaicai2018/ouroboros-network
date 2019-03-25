@@ -345,8 +345,10 @@ instance OuroborosTag p => UpdateLedger (SimpleBlock p c) where
     deriving (Show)
   data LedgerConfig (SimpleBlock p c) = MockLedgerConfig
 
+  applyLedgerHeader _ _ = pure
+
   -- Apply a block to the ledger state
-  applyLedgerBlock _ b (SimpleLedgerBlock u c) = do
+  applyLedgerBlock _ b (SimpleLedgerState u c) = do
       u' <- withExceptT LedgerErrorInvalidInputs $ updateUtxo b u
       return $ SimpleLedgerState u' (c `Set.union` confirmed b)
 
