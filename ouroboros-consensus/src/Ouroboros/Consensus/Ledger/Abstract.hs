@@ -106,15 +106,17 @@ applyExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                     -> ExtLedgerState b
                     -> Except (ExtValidationError b) (ExtLedgerState b)
 applyExtLedgerState cfg b ExtLedgerState{..} = do
-    ledgerState'         <- withExcept ExtValidationErrorLedger $
-                              applyLedgerBlock (ledgerConfigView cfg) b ledgerState
+    ledgerState'        <- withExcept ExtValidationErrorLedger $
+                              applyLedgerHeader (ledgerConfigView cfg) b ledgerState
     ouroborosChainState' <- withExcept ExtValidationErrorOuroboros $
                               applyChainState
                                 cfg
                                 (protocolLedgerView cfg ledgerState')
                                 b
                                 ouroborosChainState
-    return $ ExtLedgerState ledgerState' ouroborosChainState'
+    ledgerState''        <- withExcept ExtValidationErrorLedger $
+                              applyLedgerBlock (ledgerConfigView cfg) b ledgerState'
+    return $ ExtLedgerState ledgerState'' ouroborosChainState'
 
 foldExtLedgerState :: (LedgerConfigView b, ProtocolLedgerView b)
                    => NodeConfig (BlockProtocol b)
