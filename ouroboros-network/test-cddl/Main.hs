@@ -13,9 +13,13 @@ where
 
 import Ouroboros.Network.Protocol.ChainSync.Type as CS
 import Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
+
 import Network.TypedProtocol.Codec
+import Network.TypedProtocol.ReqResp.Type as ReqResp
+import Ouroboros.Network.Protocol.ReqResp.Codec (codecReqResp)
 
 import System.Process
+import Control.Monad
 import Control.Exception.Base (throw)
 import Data.ByteString.Lazy  as BS (ByteString, readFile, hGetContents)
 import qualified Codec.Serialise.Class as Serialise
@@ -24,15 +28,16 @@ import Codec.CBOR.Read
 import GHC.Stack (HasCallStack)
 
 main :: IO ()
-main = do
-    putStrLn "main"
+main = replicateM_ 25 generateAndDecode 
+
 
 generateAndDecode :: IO ()
 generateAndDecode = do
     (_, Just hout, _, _) <- createProcess shellProcess
     BS.hGetContents hout >>= decodeMsg . decodeTopTerm
     where
-       shellProcess = (shell "./cddl messages.cddl generate  | ./diag2cbor.rb -") { std_out = CreatePipe }
+       shellProcess = (shell "./cddl messages.cddl generate  | ./diag2cbor.rb -")
+                             { std_out = CreatePipe }
 
 decodeFile :: FilePath -> IO ()
 decodeFile f =
@@ -54,8 +59,8 @@ decodeTopTerm input
 
 decodeMsg :: HasCallStack => (Word, ByteString) -> IO ()
 decodeMsg (tag, input) = case tag of
-    0 -> tryParsers "chainSyncParsers" chainSyncParsers
-    1 -> error "reqRespMessage"
+    0 -> tryParsers "chainSyncParsers"  chainSyncParsers
+    1 -> tryParsers "reqRespMessage"    reqRespParsers
     2 -> error "pingPongMessage"
     3 -> error "blockFetchMessage"
     4 -> error "txSubmissionMessage"
@@ -73,15 +78,21 @@ decodeMsg (tag, input) = case tag of
              -> PeerHasAgency pr st -> IO Bool
         run codec state = runCodec ((decode codec) state) input
   
-        runCS = run (codecChainSync :: MonoCodec (CS.ChainSync DummyBytes DummyBytes))
-      
+        runCS = run (codecChainSync :: MonoCodec (ChainSync DummyBytes DummyBytes))
         chainSyncParsers = [
-              runCS (ClientAgency TokIdle)
-            , runCS (ServerAgency (TokNext TokCanAwait))
-            , runCS (ClientAgency TokIdle)
-            , runCS (ServerAgency TokIntersect)
-            , runCS (ServerAgency TokIntersect)
+              runCS (ClientAgency CS.TokIdle)
+            , runCS (ServerAgency (CS.TokNext TokCanAwait))
+            , runCS (ClientAgency CS.TokIdle)
+            , runCS (ServerAgency CS.TokIntersect)
+            , runCS (ServerAgency CS.TokIntersect)
             ]
+
+        runReqResp = run (codecReqResp :: MonoCodec (ReqResp DummyBytes DummyBytes))
+        reqRespParsers = [
+              runReqResp (ClientAgency ReqResp.TokIdle)
+            , runReqResp (ServerAgency ReqResp.TokBusy) 
+            ]
+
 
 runCodec
   :: IO (DecodeStep ByteString DeserialiseFailure IO (SomeMessage st))
