@@ -13,10 +13,14 @@ where
 
 import Ouroboros.Network.Protocol.ChainSync.Type as CS
 import Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
-
-import Network.TypedProtocol.Codec
 import Network.TypedProtocol.ReqResp.Type as ReqResp
 import Ouroboros.Network.Protocol.ReqResp.Codec (codecReqResp)
+
+import Ouroboros.Network.Protocol.PingPong.Codec (codecPingPong)
+import Network.TypedProtocol.PingPong.Type as PingPong
+
+import Network.TypedProtocol.Codec
+
 
 import System.Process
 import Control.Monad
@@ -59,9 +63,9 @@ decodeTopTerm input
 
 decodeMsg :: HasCallStack => (Word, ByteString) -> IO ()
 decodeMsg (tag, input) = case tag of
-    0 -> tryParsers "chainSyncParsers"  chainSyncParsers
-    1 -> tryParsers "reqRespMessage"    reqRespParsers
-    2 -> error "pingPongMessage"
+    0 -> tryParsers "chainSync"  chainSyncParsers
+    1 -> tryParsers "reqResp"    reqRespParsers
+    2 -> tryParsers "pingPong"   pingPongParsers
     3 -> error "blockFetchMessage"
     4 -> error "txSubmissionMessage"
     5 -> error "muxControlMessage"
@@ -93,7 +97,13 @@ decodeMsg (tag, input) = case tag of
             , runReqResp (ServerAgency ReqResp.TokBusy) 
             ]
 
-
+        runPingPong = run (codecPingPong :: MonoCodec PingPong)
+        pingPongParsers = [
+              runPingPong (ClientAgency PingPong.TokIdle)
+            , runPingPong (ServerAgency PingPong.TokBusy) 
+            ]
+          
+        
 runCodec
   :: IO (DecodeStep ByteString DeserialiseFailure IO (SomeMessage st))
   -> ByteString
