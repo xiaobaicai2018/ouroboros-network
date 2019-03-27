@@ -33,6 +33,7 @@ module Ouroboros.Consensus.Ledger.Mock (
   , forgeBlock
     -- * Updating the Ledger state
   , LedgerState(..)
+  , HeaderState(..)
   , AddrDist
   , relativeStakes
   , totalStakes
@@ -343,10 +344,16 @@ instance OuroborosTag p => UpdateLedger (SimpleBlock p c) where
   data LedgerError (SimpleBlock p c) = LedgerErrorInvalidInputs InvalidInputs
     deriving (Show)
 
+  -- TODO
+  data HeaderState (SimpleBlock p c) = SimpleHeaderState
+
   -- Apply a block to the ledger state
   applyLedgerState b (SimpleLedgerState u c) = do
       u' <- withExceptT LedgerErrorInvalidInputs $ updateUtxo b u
       return $ SimpleLedgerState u' (c `Set.union` confirmed b)
+
+  getHeaderState = error "TODO"
+  advanceHeader  = error "TODO"
 
 deriving instance OuroborosTag p => Show (LedgerState (SimpleBlock p c))
 
