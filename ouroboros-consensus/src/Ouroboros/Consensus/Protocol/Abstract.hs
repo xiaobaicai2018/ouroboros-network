@@ -16,7 +16,6 @@ module Ouroboros.Consensus.Protocol.Abstract (
   , HasPreHeader(..)
   , HasPayload(..)
   , SecurityParam(..)
-  , selectChain
     -- * State monad for Ouroboros state
   , HasNodeState
   , HasNodeState_(..)
@@ -36,15 +35,13 @@ import           Crypto.Random (MonadRandom (..))
 import           Data.Function (on)
 import           Data.Functor.Identity
 import           Data.Kind (Constraint)
-import           Data.List (sortBy)
-import           Data.Maybe (listToMaybe)
 import           Data.Word (Word64)
 
 import           Control.Monad.Class.MonadSay
 
 import           Ouroboros.Network.Block (HasHeader (..), SlotNo (..))
-import           Ouroboros.Network.Chain (Chain (..))
-import qualified Ouroboros.Network.Chain as Chain
+import           Ouroboros.Network.ChainFragment (ChainFragment (..))
+import qualified Ouroboros.Network.ChainFragment as CF
 
 import           Ouroboros.Consensus.Util.Random
 
@@ -108,20 +105,26 @@ class ( Show (ChainState    p)
   -- NOTE: Assumes that our chain does not extend into the future.
   preferCandidate :: (Eq b, HasHeader b)
                   => NodeConfig p
-                  -> Chain b      -- ^ Our chain
-                  -> Chain b      -- ^ Candidate
+                  -> ChainFragment b      -- ^ Our chain
+                  -> ChainFragment b      -- ^ Candidate
                   -> Bool
   preferCandidate _ ours cand =
-    Chain.length cand > Chain.length ours
-    -- TODO reject blocks in the future -> will be the responsibility of the
-    -- chain sync client
+    -- Since we're dealing with 'ChainFragment's, we can't simply compare
+    -- their length, since they will not represent the whole chain anyway.
+    -- Instead, compare the 'BlockNo' of their most recent blocks (headers in
+    -- fact), which is a valid proxy for the chain length.
+    CF.headOrGenBlockNo cand > CF.headOrGenBlockNo ours
     -- TODO handle genesis
 
   -- | Compare two candidates, both of which we prefer to our own chain
   compareCandidates :: (Eq b, HasHeader b)
                     => NodeConfig p
-                    -> Chain b -> Chain b -> Ordering
-  compareCandidates _ = compare `on` Chain.length
+                    -> ChainFragment b -> ChainFragment b -> Ordering
+  compareCandidates _ = compare `on` CF.headOrGenBlockNo
+    -- Since we're dealing with 'ChainFragment's, we can't simply compare
+    -- their length, since they will not represent the whole chain anyway.
+    -- Instead, compare the 'BlockNo' of their most recent blocks (headers in
+    -- fact), which is a valid proxy for the chain length.
 
   -- | Check if a node is the leader
   checkIsLeader :: (HasNodeState p m, MonadRandom m)
@@ -165,24 +168,6 @@ class (HasHeader b, Serialise (PreHeader b)) => HasPreHeader b where
 -- important for protocol combinators.
 class HasPreHeader b => HasPayload p b where
   blockPayload :: proxy p -> b -> Payload p (PreHeader b)
-
-{-------------------------------------------------------------------------------
-  Chain selection
--------------------------------------------------------------------------------}
-
--- | Chain selection between our chain and list of candidates
---
--- Returns 'Nothing' if we stick with our current chain.
-selectChain :: forall p b. (OuroborosTag p, Eq b, HasHeader b)
-            => NodeConfig p
-            -> Chain b      -- ^ Our chain
-            -> [Chain b]    -- ^ Upstream chains
-            -> Maybe (Chain b)
-selectChain cfg ours candidates =
-    listToMaybe $ sortBy (flip (compareCandidates cfg)) preferred
-  where
-    preferred :: [Chain b]
-    preferred = filter (preferCandidate cfg ours) candidates
 
 {-------------------------------------------------------------------------------
   State monad

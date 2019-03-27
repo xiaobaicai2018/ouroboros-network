@@ -5,8 +5,10 @@ import           Control.Monad.Identity
 import           Control.Monad.Trans
 import           Crypto.Random
 
-import           Ouroboros.Network.Block (SlotNo (..))
+import           Ouroboros.Network.Block (HasHeader, SlotNo (..))
 import           Ouroboros.Network.Chain (Chain (..))
+import           Ouroboros.Network.ChainFragment (ChainFragment)
+import qualified Ouroboros.Network.ChainFragment as CF
 
 import           Ouroboros.Consensus.Util.Condense
 
@@ -20,6 +22,10 @@ instance Condense SlotNo where
 instance Condense block => Condense (Chain block) where
     condense Genesis   = "Genesis"
     condense (cs :> b) = condense cs <> " :> " <> condense b
+
+instance (Condense block, HasHeader block) => Condense (ChainFragment block) where
+    condense CF.Empty     = "Empty"
+    condense (cs CF.:> b) = condense cs <> " :> " <> condense b
 
 {-------------------------------------------------------------------------------
   MonadRandom

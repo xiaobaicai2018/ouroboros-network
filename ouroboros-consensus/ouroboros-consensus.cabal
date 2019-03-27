@@ -25,6 +25,7 @@ library
 
   exposed-modules:
                        Ouroboros.Consensus.BlockchainTime
+                       Ouroboros.Consensus.ChainSyncClient
                        Ouroboros.Consensus.Crypto.DSIGN
                        Ouroboros.Consensus.Crypto.DSIGN.Class
                        Ouroboros.Consensus.Crypto.DSIGN.Ed448
@@ -57,6 +58,7 @@ library
                        Ouroboros.Consensus.Util
                        Ouroboros.Consensus.Util.CBOR
                        Ouroboros.Consensus.Util.Chain
+                       Ouroboros.Consensus.Util.ChainFragment
                        Ouroboros.Consensus.Util.Classify
                        Ouroboros.Consensus.Util.Condense
                        Ouroboros.Consensus.Util.HList
@@ -68,6 +70,7 @@ library
 
                        -- Storing things on disk
                        Ouroboros.Storage.Common
+                       Ouroboros.Storage.ChainDB.API
                        Ouroboros.Storage.FS.API
                        Ouroboros.Storage.FS.API.Example
                        Ouroboros.Storage.FS.API.Types
