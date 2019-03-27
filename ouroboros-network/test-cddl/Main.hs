@@ -15,8 +15,9 @@ import Ouroboros.Network.Protocol.ChainSync.Type as CS
 import Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
 import Network.TypedProtocol.Codec
 
+import System.Process
 import Control.Exception.Base (throw)
-import Data.ByteString.Lazy  as BS (ByteString, readFile)
+import Data.ByteString.Lazy  as BS (ByteString, readFile, hGetContents)
 import qualified Codec.Serialise.Class as Serialise
 import Codec.CBOR.Decoding (decodeWord, decodeListLenOf, decodeBytes)
 import Codec.CBOR.Read
@@ -25,6 +26,13 @@ import GHC.Stack (HasCallStack)
 main :: IO ()
 main = do
     putStrLn "main"
+
+generateAndDecode :: IO ()
+generateAndDecode = do
+    (_, Just hout, _, _) <- createProcess shellProcess
+    BS.hGetContents hout >>= decodeMsg . decodeTopTerm
+    where
+       shellProcess = (shell "./cddl messages.cddl generate  | ./diag2cbor.rb -") { std_out = CreatePipe }
 
 decodeFile :: FilePath -> IO ()
 decodeFile f =
