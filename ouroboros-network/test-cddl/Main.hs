@@ -13,10 +13,12 @@ where
 
 import Ouroboros.Network.Protocol.ChainSync.Type as CS
 import Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
+import Network.TypedProtocol.Codec
 
 import Control.Exception.Base (throw)
-import Data.ByteString.Lazy  as BS (ByteString)
-import Codec.CBOR.Decoding (decodeWord, decodeListLenOf)
+import Data.ByteString.Lazy  as BS (ByteString, readFile)
+import qualified Codec.Serialise.Class as Serialise
+import Codec.CBOR.Decoding (decodeWord, decodeListLenOf, decodeBytes)
 import Codec.CBOR.Read
 import GHC.Stack (HasCallStack)
 
@@ -24,14 +26,23 @@ main :: IO ()
 main = do
     putStrLn "main"
 
+decodeFile :: FilePath -> IO ()
+decodeFile f =
+    BS.readFile f >>= decodeMsg . decodeTopTerm
+
+type MonoCodec x = Codec x Codec.CBOR.Read.DeserialiseFailure IO ByteString
+
+data DummyBytes = DummyBytes
+instance Serialise.Serialise DummyBytes where
+    encode _ = error "encode Serialise DummyByteString"
+    decode = decodeBytes >> return DummyBytes
+
 -- | Split the ByteString into the tag-word and the rest.
-unwrapTopTerm :: ByteString -> (Word, ByteString)
-unwrapTopTerm input
+decodeTopTerm :: ByteString -> (Word, ByteString)
+decodeTopTerm input
     = case deserialiseFromBytes (decodeListLenOf 2 >> decodeWord) input of
         Right (bs,tag) -> (tag,bs)
         Left err -> throw err
-
-type MonoCodec x = Codec x Codec.CBOR.Read.DeserialiseFailure IO ByteString
 
 decodeMsg :: HasCallStack => (Word, ByteString) -> IO ()
 decodeMsg (tag, input) = case tag of
@@ -43,26 +54,26 @@ decodeMsg (tag, input) = case tag of
     5 -> error "muxControlMessage"
     _ -> error "unkown tag"
     where
-      tryParsers :: String -> [IO Bool] -> IO ()
-      tryParsers name [] = error $ "parse failed : " ++ name
-      tryParsers name (h:t) = h >>= \case
-          True -> return ()
-          False -> tryParsers name t
+        tryParsers :: String -> [IO Bool] -> IO ()
+        tryParsers name [] = error $ "parse failed : " ++ name
+        tryParsers name (h:t) = h >>= \case
+            True -> return ()
+            False -> tryParsers name t
 
-      run :: forall ps (pr :: PeerRole) (st :: ps).
-             Codec ps DeserialiseFailure IO ByteString
+        run :: forall ps (pr :: PeerRole) (st :: ps).
+                Codec ps DeserialiseFailure IO ByteString
              -> PeerHasAgency pr st -> IO Bool
-      run codec state = runCodec ((decode codec) state) input
+        run codec state = runCodec ((decode codec) state) input
   
-      runCS = run (codecChainSync :: MonoCodec (CS.ChainSync () ()))
+        runCS = run (codecChainSync :: MonoCodec (CS.ChainSync DummyBytes DummyBytes))
       
-      chainSyncParsers = [
-               runCS (ClientAgency TokIdle)
-             , runCS (ServerAgency (TokNext TokCanAwait))
-             , runCS (ClientAgency TokIdle)
-             , runCS (ServerAgency TokIntersect)
-             , runCS (ServerAgency TokIntersect)
-             ]
+        chainSyncParsers = [
+              runCS (ClientAgency TokIdle)
+            , runCS (ServerAgency (TokNext TokCanAwait))
+            , runCS (ClientAgency TokIdle)
+            , runCS (ServerAgency TokIntersect)
+            , runCS (ServerAgency TokIntersect)
+            ]
 
 runCodec
   :: IO (DecodeStep ByteString DeserialiseFailure IO (SomeMessage st))
@@ -77,6 +88,3 @@ runCodec cont bs = cont >>= \case
             Nothing -> return True
             Just _r  -> return False
         DecodeFail _f -> return False
-
-
-
