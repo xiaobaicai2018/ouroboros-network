@@ -15,12 +15,13 @@ import Ouroboros.Network.Protocol.ChainSync.Type as CS
 import Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSync)
 import Network.TypedProtocol.ReqResp.Type as ReqResp
 import Ouroboros.Network.Protocol.ReqResp.Codec (codecReqResp)
-
 import Ouroboros.Network.Protocol.PingPong.Codec (codecPingPong)
 import Network.TypedProtocol.PingPong.Type as PingPong
+import Ouroboros.Network.Protocol.BlockFetch.Codec (codecBlockFetch)
+import Ouroboros.Network.Protocol.BlockFetch.Type as BlockFetch
+import  Ouroboros.Network.Testing.ConcreteBlock 
 
 import Network.TypedProtocol.Codec
-
 
 import System.Process
 import Control.Monad
@@ -33,7 +34,6 @@ import GHC.Stack (HasCallStack)
 
 main :: IO ()
 main = replicateM_ 25 generateAndDecode 
-
 
 generateAndDecode :: IO ()
 generateAndDecode = do
@@ -51,8 +51,19 @@ type MonoCodec x = Codec x Codec.CBOR.Read.DeserialiseFailure IO ByteString
 
 data DummyBytes = DummyBytes
 instance Serialise.Serialise DummyBytes where
-    encode _ = error "encode Serialise DummyByteString"
+    encode _ = error "encode Serialise DummyBytes"
     decode = decodeBytes >> return DummyBytes
+type Body = DummyBytes
+
+{-
+data Header = Header
+instance Serialise.Serialise Header where
+    encode _ = error "encode Serialise Header"
+    decode = decodeBytes >> return Header
+
+instance HasHeader Header
+instance StandardHash Header
+-}
 
 -- | Split the ByteString into the tag-word and the rest.
 decodeTopTerm :: ByteString -> (Word, ByteString)
@@ -66,7 +77,7 @@ decodeMsg (tag, input) = case tag of
     0 -> tryParsers "chainSync"  chainSyncParsers
     1 -> tryParsers "reqResp"    reqRespParsers
     2 -> tryParsers "pingPong"   pingPongParsers
-    3 -> error "blockFetchMessage"
+    3 -> tryParsers "blockFetch" blockFetchParsers
     4 -> error "txSubmissionMessage"
     5 -> error "muxControlMessage"
     _ -> error "unkown tag"
@@ -102,7 +113,13 @@ decodeMsg (tag, input) = case tag of
               runPingPong (ClientAgency PingPong.TokIdle)
             , runPingPong (ServerAgency PingPong.TokBusy) 
             ]
-          
+
+        runBlockFetch = run (codecBlockFetch :: MonoCodec (BlockFetch BlockHeader BlockBody))
+        blockFetchParsers = [
+              runBlockFetch (ClientAgency BlockFetch.TokIdle)
+            , runBlockFetch (ServerAgency BlockFetch.TokBusy)
+            , runBlockFetch (ServerAgency BlockFetch.TokStreaming)
+            ]
         
 runCodec
   :: IO (DecodeStep ByteString DeserialiseFailure IO (SomeMessage st))
