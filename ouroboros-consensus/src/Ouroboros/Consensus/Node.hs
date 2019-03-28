@@ -394,19 +394,16 @@ initNetworkLayer NetworkRequires{..} = do
     -- synchronously with our chain, it is fine for this to lag. TODO update
     cpsVar <- atomically $ do
       chain <- readCurrentChain nrBlockFetch
-      -- TODO use ChainFragment in ChainProducerState
-      newTVar $ initChainProducerState (CF.toChain chain)
+      newTVar $ initChainProducerState chain
 
     -- We also continously monitor our own chain, so that we can update our
     -- downstream peers when our chain changes
     void $ fork $ forever $ atomically $ do
       chain <- readCurrentChain nrBlockFetch
       cps   <- readTVar cpsVar
-      -- TODO: We should probably not just compare the slot
-      if CF.headOrGenPoint chain == Chain.headPoint (chainState cps)
+      if CF.headOrGenPoint chain == CF.headOrGenPoint (chainState cps)
         then retry
-             -- TODO let switchFork take a ChainFragment
-        else modifyTVar cpsVar (switchFork (CF.toChain chain))
+        else modifyTVar cpsVar (switchFork chain)
 
     -- Run the block fetch logic in the background. This will call
     -- 'addFetchedBlock' whenever a new block is downloaded.
@@ -415,13 +412,6 @@ initNetworkLayer NetworkRequires{..} = do
 
     return $ NetworkProvides {
           npAddDownstream = \NodeComms{..} -> do
-            -- TODO use an iterator from the ChainDB in chainSyncServerPeer
-            -- instead of ChainProducerState
-            --
-            -- TODO server side of chain sync protocol will be instantiated to
-            -- the product of a block header + block size
-            --
-            -- TODO update chainSyncServerExample
             let producer = chainSyncServerPeer (chainSyncServerExample () cpsVar)
             void $ fork $ void $ ncWithChan $ \chan ->
               runPeer nullTracer ncCodec chan producer

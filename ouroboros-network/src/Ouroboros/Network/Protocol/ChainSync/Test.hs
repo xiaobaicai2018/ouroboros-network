@@ -28,6 +28,7 @@ import           Ouroboros.Network.Channel
 
 import           Ouroboros.Network.Chain (Point)
 import qualified Ouroboros.Network.Chain as Chain
+import qualified Ouroboros.Network.ChainFragment as CF
 import qualified Ouroboros.Network.ChainProducerState as ChainProducerState
 
 import Ouroboros.Network.Protocol.ChainSync.Type
@@ -100,12 +101,12 @@ chainSyncForkExperiment
 chainSyncForkExperiment run (ChainProducerStateForkTest cps chain) = do
   let pchain = ChainProducerState.producerChain cps
   cpsVar   <- atomically $ newTVar cps
-  chainVar <- atomically $ newTVar chain
+  chainVar <- atomically $ newTVar (CF.fromChain chain)
   doneVar  <- atomically $ newTVar False
   let server = ChainSyncExamples.chainSyncServerExample
         (error "chainSyncServerExample: lazy in the result type")
         cpsVar
-      client = ChainSyncExamples.chainSyncClientExample chainVar (testClient doneVar (Chain.headPoint pchain))
+      client = ChainSyncExamples.chainSyncClientExample chainVar (testClient doneVar (CF.headOrGenPoint pchain))
   _ <- run server client
 
   cchain <- atomically $ readTVar chainVar
@@ -223,14 +224,14 @@ chainSyncDemo
 chainSyncDemo clientChan serverChan (ChainProducerStateForkTest cps chain) = do
   let pchain = ChainProducerState.producerChain cps
   cpsVar   <- atomically $ newTVar cps
-  chainVar <- atomically $ newTVar chain
+  chainVar <- atomically $ newTVar (CF.fromChain chain)
   doneVar  <- atomically $ newTVar False
 
   let server = ChainSyncExamples.chainSyncServerExample
         (error "chainSyncServerExample: lazy in the result type")
         cpsVar
 
-      client = ChainSyncExamples.chainSyncClientExample chainVar (testClient doneVar (Chain.headPoint pchain))
+      client = ChainSyncExamples.chainSyncClientExample chainVar (testClient doneVar (CF.headOrGenPoint pchain))
 
   void $ fork (void $ runPeer nullTracer codecChainSync serverChan (chainSyncServerPeer server))
   void $ fork (void $ runPeer nullTracer codecChainSync clientChan (chainSyncClientPeer client))

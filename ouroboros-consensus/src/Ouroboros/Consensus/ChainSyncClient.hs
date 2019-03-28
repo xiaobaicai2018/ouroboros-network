@@ -196,7 +196,7 @@ consensusSyncClient cfg btime (ClockSkew maxSkew) chainDB candidatesVar up =
               -- max length of the current chain fragment is k, so if the
               -- intersection point is on it, then it is less than k blocks
               -- old.
-              upstreamChain <- case CF.rollback intersection ourChain of
+              upstreamChain <- case CF.rollback' intersection ourChain of
                 -- If the intersection is not on our chain, it means our
                 -- chain has changed since we sent the points, or the peer
                 -- sent an invalid response. Either way, try again, by
@@ -267,7 +267,7 @@ consensusSyncClient cfg btime (ClockSkew maxSkew) chainDB candidatesVar up =
 
       , recvMsgRollBackward = \intersection theirHead -> ChainSyncClient $ atomically $ do
           (ourChain, ledgerState, UpstreamState {..}) <- readCurrent upstreamStateVar
-          upstreamChain' <- case CF.rollback intersection upstreamChain of
+          upstreamChain' <- case CF.rollback' intersection upstreamChain of
             Just upstreamChain' -> return upstreamChain'
             Nothing             -> throwM $
               InvalidRollBack @blk @hdr intersection theirHead

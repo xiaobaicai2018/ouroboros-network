@@ -1,11 +1,11 @@
-{-# LANGUAGE NamedFieldPuns  #-}
-{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE NamedFieldPuns #-}
 
 module Ouroboros.Network.ChainProducerState where
 
-import           Ouroboros.Network.Chain (Chain, ChainUpdate (..), HasHeader,
-                     Point (..), blockPoint, genesisPoint, pointOnChain)
-import qualified Ouroboros.Network.Chain as Chain
+import           Ouroboros.Network.Chain (Chain, genesisPoint)
+import           Ouroboros.Network.ChainFragment (ChainFragment (..),
+                     ChainUpdate (..), HasHeader, Point (..), blockPoint)
+import qualified Ouroboros.Network.ChainFragment as CF
 
 import           Control.Exception (assert)
 import           Data.List (find, group, sort)
@@ -16,7 +16,7 @@ import           Data.Maybe (fromMaybe)
 -- A @'ChainState'@ plus an associated set of readers/consumers of the chain.
 
 data ChainProducerState block = ChainProducerState {
-       chainState   :: Chain block,
+       chainState   :: ChainFragment block,
        chainReaders :: ReaderStates block
      }
   deriving (Eq, Show)
@@ -86,12 +86,14 @@ data ReaderNext = ReaderBackTo | ReaderForwardFrom
 
 invChainProducerState :: HasHeader block => ChainProducerState block -> Bool
 invChainProducerState (ChainProducerState c rs) =
-    Chain.valid c
+    CF.valid c
  && invReaderStates c rs
 
-invReaderStates :: HasHeader block => Chain block -> ReaderStates block -> Bool
+invReaderStates :: HasHeader block
+                => ChainFragment block -> ReaderStates block -> Bool
 invReaderStates c rs =
-    and [ pointOnChain readerPoint c | ReaderState{readerPoint} <- rs ]
+    and [ CF.pointOrGenOnChainFragment readerPoint c
+        | ReaderState{readerPoint} <- rs ]
  && noDuplicates [ readerId | ReaderState{readerId} <- rs ]
 
 noDuplicates :: Ord a => [a] -> Bool
@@ -103,11 +105,18 @@ noDuplicates = all ((== 1) . length) . group . sort
 --
 
 
--- | Initialise @'ChainProducerState'@ with a given @'Chain'@ and empty list of
--- readers.
+-- | Initialise @'ChainProducerState'@ with a given @'ChainFragment'@ and
+-- empty list of readers.
 --
-initChainProducerState :: Chain block -> ChainProducerState block
+initChainProducerState :: ChainFragment block -> ChainProducerState block
 initChainProducerState c = ChainProducerState c []
+
+-- | Initialise @'ChainProducerState'@ with a given @'Chain'@ and
+-- empty list of readers.
+--
+initChainProducerState' :: HasHeader block
+                        => Chain block -> ChainProducerState block
+initChainProducerState' c = ChainProducerState (CF.fromChain c) []
 
 
 -- | Get the recorded state of a chain consumer. The 'ReaderId' is assumed to
@@ -121,16 +130,22 @@ lookupReader (ChainProducerState _ rs) rid =
     Just st = find (\r -> readerId r == rid) rs
 
 
+-- | Extract @'ChainFragment'@ from @'ChainProducerState'@.
+--
+producerChain :: ChainProducerState block -> ChainFragment block
+producerChain (ChainProducerState c _) = c
+
 -- | Extract @'Chain'@ from @'ChainProducerState'@.
 --
-producerChain :: ChainProducerState block -> Chain block
-producerChain (ChainProducerState c _) = c
+producerChain' :: HasHeader block
+               => ChainProducerState block -> Chain block
+producerChain' (ChainProducerState c _) = CF.toChain c
 
 findFirstPoint :: HasHeader block
                => [Point block]
                -> ChainProducerState block
                -> Maybe (Point block)
-findFirstPoint ps = Chain.findFirstPoint ps . producerChain
+findFirstPoint ps = CF.findFirstPoint ps . producerChain
 
 
 -- | Add a new reader with the given intersection point and return the new
@@ -141,7 +156,7 @@ initReader :: HasHeader block
            -> ChainProducerState block
            -> (ChainProducerState block, ReaderId)
 initReader point (ChainProducerState c rs) =
-    assert (pointOnChain point c) $
+    assert (CF.pointOrGenOnChainFragment point c) $
     (ChainProducerState c (r:rs), readerId r)
   where
     r = ReaderState {
@@ -168,7 +183,7 @@ updateReader :: HasHeader block
              -> ChainProducerState block
              -> ChainProducerState block
 updateReader rid point (ChainProducerState c rs) =
-    assert (pointOnChain point c) $
+    assert (CF.pointOrGenOnChainFragment point c) $
     ChainProducerState c (map update rs)
   where
     update r | readerId r == rid = r { readerPoint = point,
@@ -181,16 +196,16 @@ updateReader rid point (ChainProducerState c rs) =
 -- `ReaderBackTo` state, otherwise preserve reader state.
 --
 switchFork :: HasHeader block
-           => Chain block
+           => ChainFragment block
            -> ChainProducerState block
            -> ChainProducerState block
 switchFork c (ChainProducerState c' rs) =
     ChainProducerState c (map update rs)
   where
-    ipoint = fromMaybe genesisPoint $ Chain.intersectChains c c'
+    ipoint = fromMaybe genesisPoint $ CF.intersectionPoint c c'
 
     update r@ReaderState{readerPoint} =
-      if pointOnChain readerPoint c
+      if CF.pointOrGenOnChainFragment readerPoint c
         then r
         else r { readerPoint = ipoint, readerNext = ReaderBackTo }
 
@@ -207,8 +222,8 @@ readerInstruction rid cps@(ChainProducerState c rs) =
     let ReaderState {readerPoint, readerNext} = lookupReader cps rid in
     case readerNext of
       ReaderForwardFrom ->
-          assert (pointOnChain readerPoint c) $
-          case Chain.successorBlock readerPoint c of
+          assert (CF.pointOrGenOnChainFragment readerPoint c) $
+          case CF.successorBlock' readerPoint c of
             -- There is no successor block because the reader is at the head
             Nothing -> Nothing
 
@@ -234,7 +249,7 @@ addBlock :: HasHeader block
          -> ChainProducerState block
          -> ChainProducerState block
 addBlock b (ChainProducerState c rs) =
-    ChainProducerState (Chain.addBlock b c) rs
+    ChainProducerState (CF.addBlock b c) rs
 
 
 -- | Rollback producer chain. It requires to update reader states, since some
@@ -245,7 +260,7 @@ rollback :: HasHeader block
          -> ChainProducerState block
          -> Maybe (ChainProducerState block)
 rollback p (ChainProducerState c rs) =
-    ChainProducerState <$> Chain.rollback p c
+    ChainProducerState <$> CF.rollback p c
                        <*> pure rs'
   where
     rs' = [ if pointSlot p' > pointSlot p
