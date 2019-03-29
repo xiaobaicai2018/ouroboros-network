@@ -1,6 +1,7 @@
 {-# LANGUAGE RankNTypes          #-}
 {-# LANGUAGE NamedFieldPuns      #-}
 {-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
 
 -- |
 -- Module exports interface for running a node over a socket over TCP \/ IP.
@@ -35,7 +36,6 @@ import qualified Ouroboros.Network.Mux.Control as Mx
 import           Ouroboros.Network.Mux.Interface ( NetworkInterface (..)
                                                  , NetworkNode (..)
                                                  , Connection (..)
-                                                 , miniProtocolDescription
                                                  )
 
 import           Text.Printf
@@ -115,8 +115,9 @@ runNetworkNodeWithSocket'
      , Ord ptcl
      , Enum ptcl
      , Bounded ptcl
+     , Show ptcl
      )
-  => NetworkInterface ptcl AddrInfo IO
+  => NetworkInterface AddrInfo IO
   -> Maybe (Maybe SomeException -> IO ())
   -> IO (NetworkNode AddrInfo IO)
 runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions} k = do
@@ -146,7 +147,7 @@ runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions} k = do
             void $ async $ watcher client aid
 
           larval sd = do
-            bearer <- socketAsMuxBearer sd
+            bearer <- socketAsMuxBearer @ptcl sd
             Mx.muxBearerSetState bearer Mx.Connected
             Mx.runCtrlServer knownVersions bearer
 
@@ -169,7 +170,7 @@ runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions} k = do
               bind sd (addrAddress nodeAddress)
               connect sd (addrAddress remote)
               hdl <- async $ do
-                bearer <- socketAsMuxBearer sd
+                bearer <- socketAsMuxBearer @ptcl sd
                 Mx.muxBearerSetState bearer Mx.Connected
                 Mx.runCtrlClient knownVersions bearer
               return $ Connection {
@@ -199,6 +200,7 @@ runNetworkNodeWithSocket
      , Ord ptcl
      , Enum ptcl
      , Bounded ptcl
+     , Show ptcl
      )
   => NetworkInterface ptcl AddrInfo IO
   -> IO (NetworkNode AddrInfo IO)
@@ -218,6 +220,7 @@ withNetworkNode
      , Ord ptcl
      , Enum ptcl
      , Bounded ptcl
+     , Show ptcl
      )
   => NetworkInterface ptcl AddrInfo IO
   -> (NetworkNode AddrInfo IO -> IO a)

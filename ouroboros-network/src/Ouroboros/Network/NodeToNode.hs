@@ -13,10 +13,8 @@ module Ouroboros.Network.NodeToNode (
 
 
 import           Data.Word
-import           GHC.TypeNats
 
 import           Ouroboros.Network.Mux.Types (ProtocolEnum(..))
-import           Ouroboros.Network.Mux.Control
 
 
 -- | An index type used with the mux to enumerate all the mini-protocols that
@@ -57,5 +55,3 @@ newtype NodeToNodeVersion = NodeToNodeVersion {
     ntnNetworkMagic :: Word32
   }
   deriving (Eq, Ord, Show)
-
-type instance MuxVersion (10 :: Nat) = NodeToNodeVersion

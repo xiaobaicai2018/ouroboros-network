@@ -95,7 +95,7 @@ data MuxPeer m where
 -- |
 -- Public network interface for 'ouroboros-network'.
 --
-data NetworkInterface ptcl addr m = NetworkInterface {
+data NetworkInterface addr m = NetworkInterface {
       -- |
       -- Address of the node to run.  The node will bind to this address, and
       -- listen for incoming connections.  Some bearers do not have a notion of

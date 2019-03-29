@@ -1,7 +1,10 @@
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE RankNTypes            #-}
-{-# LANGUAGE RecordWildCards       #-}
-{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE GADTs                     #-}
+{-# LANGUAGE MultiParamTypeClasses     #-}
+{-# LANGUAGE RankNTypes                #-}
+{-# LANGUAGE RecordWildCards           #-}
+{-# LANGUAGE StandaloneDeriving        #-}
+{-# LANGUAGE TypeFamilies              #-}
+{-# LANGUAGE ExistentialQuantification #-}
 
 module Ouroboros.Network.Mux.Types (
       MiniProtocolDescription (..)
@@ -64,16 +67,20 @@ class ProtocolEnum ptcl where
 -- >                   | ClientRPC
 -- >   deriving (Eq, Ord, Enum, Bounded, Show)
 --
-data MiniProtocolId ptcl = Muxcontrol
-                         | DeltaQ
-                         | AppProtocolId ptcl
-                    deriving (Eq, Ord, Show)
+data MiniProtocolId ptcl where
+  Muxcontrol    :: MiniProtocolId ptcl
+  DeltaQ        :: MiniProtocolId ptcl
+  AppProtocolId :: (Ord ptcl, Show ptcl) => ptcl -> MiniProtocolId ptcl
+
+deriving instance Eq   (MiniProtocolId ptcl)
+deriving instance Ord  (MiniProtocolId ptcl)
+deriving instance Show (MiniProtocolId ptcl)
 
 -- | Shift the inner enumeration up by two, to account for the two mux built-in
 -- mini-protocols. This determines the final wire format for the protocol
 -- numbers.
 --
-instance ProtocolEnum ptcl => ProtocolEnum (MiniProtocolId ptcl) where
+instance (Ord ptcl, Show ptcl, ProtocolEnum ptcl) => ProtocolEnum (MiniProtocolId ptcl) where
   fromProtocolEnum Muxcontrol           = 0
   fromProtocolEnum DeltaQ               = 1
   fromProtocolEnum (AppProtocolId ptcl) = fromProtocolEnum ptcl
@@ -86,7 +93,7 @@ instance ProtocolEnum ptcl => ProtocolEnum (MiniProtocolId ptcl) where
 -- mini-protocols. This instance is never used for the wire format, just for
 -- internal purposes such as dispatch tables.
 --
-instance Enum ptcl => Enum (MiniProtocolId ptcl) where
+instance (Enum ptcl, Ord ptcl, Show ptcl) => Enum (MiniProtocolId ptcl) where
   fromEnum Muxcontrol          = 0
   fromEnum DeltaQ              = 1
   fromEnum (AppProtocolId pid) = 2 + fromEnum pid
@@ -97,7 +104,7 @@ instance Enum ptcl => Enum (MiniProtocolId ptcl) where
 
 -- | We will be indexing arrays by the mini-protocol id, so need @Ix@.
 --
-instance (Ord ptcl, Enum ptcl) => Ix (MiniProtocolId ptcl) where
+instance (Ord ptcl, Show ptcl, Enum ptcl) => Ix (MiniProtocolId ptcl) where
   range   (from, to)       = enumFromTo from to
   inRange (from, to) x     = x >= from && x <= to
   index   (from, to) x
@@ -108,7 +115,7 @@ instance (Ord ptcl, Enum ptcl) => Ix (MiniProtocolId ptcl) where
 
 -- | Need bounds to be able to construct arrays of mini-protocols.
 --
-instance Bounded ptcl => Bounded (MiniProtocolId ptcl) where
+instance (Ord ptcl, Show ptcl, Bounded ptcl) => Bounded (MiniProtocolId ptcl) where
   minBound = Muxcontrol
   maxBound = AppProtocolId maxBound
 
@@ -149,13 +156,14 @@ data MuxStyle = StyleClient -- Initiate version negotiation directly.
               | StyleServer -- Wait for peer to initiate version negotiation.
               deriving (Eq, Show)
 
-data MuxSDU ptcl = MuxSDU {
+data MuxSDU where
+  MuxSDU :: forall ptcl. {
       msTimestamp :: !RemoteClockModel
     , msId        :: !(MiniProtocolId ptcl)
     , msMode      :: !MiniProtocolMode
     , msLength    :: !Word16
     , msBlob      :: !BL.ByteString
-    }
+    } -> MuxSDU
 
 data MuxSDUHeader = MuxSDUHeader {
       mshTimestamp :: !RemoteClockModel
@@ -185,7 +193,7 @@ data PerMuxSharedState ptcl m = PerMuxSS {
     dispatchTable :: MiniProtocolDispatch ptcl m
   -- | Egress queue, shared by all miniprotocols
   , tsrQueue      :: TBQueue m (TranslocationServiceRequest ptcl m)
-  , bearer        :: MuxBearer ptcl m
+  , bearer        :: MuxBearer m
   }
 
 data MuxBearerState = Larval    -- Newly created MuxBearer.
@@ -195,11 +203,11 @@ data MuxBearerState = Larval    -- Newly created MuxBearer.
                     | Dead      -- MuxBearer is dead and the underlying bearer has been closed.
                     deriving (Eq, Show)
 
-data MuxBearer ptcl m = MuxBearer {
+data MuxBearer m = MuxBearer {
     -- | Timestamp and send MuxSDU
-      write   :: MuxSDU ptcl -> m (Time m)
+      write   :: MuxSDU -> m (Time m)
     -- | Read a MuxSDU
-    , read    :: m (MuxSDU ptcl, Time m)
+    , read    :: m (MuxSDU, Time m)
     -- | Return a suitable MuxSDU payload size
     , sduSize :: m Word16
     , close   :: m ()

@@ -11,10 +11,8 @@ module Ouroboros.Network.NodeToClient (
   ) where
 
 import           Data.Word
-import           GHC.TypeNats
 
 import           Ouroboros.Network.Mux.Types (ProtocolEnum(..))
-import           Ouroboros.Network.Mux.Control
 
 
 -- | An index type used with the mux to enumerate all the mini-protocols that
@@ -42,5 +40,3 @@ newtype NodeToClientVersion = NodeToClientVersion {
     ntcNetworkMagic :: Word32
   }
   deriving (Eq, Ord, Show)
-
-type instance MuxVersion (11 :: Nat) = NodeToClientVersion

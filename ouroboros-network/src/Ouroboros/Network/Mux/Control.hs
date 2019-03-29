@@ -2,6 +2,7 @@
 {-# LANGUAGE EmptyCase                 #-}
 {-# LANGUAGE GADTs                     #-}
 {-# LANGUAGE KindSignatures            #-}
+{-# LANGUAGE LambdaCase                #-}
 {-# LANGUAGE NamedFieldPuns            #-}
 {-# LANGUAGE PolyKinds                 #-}
 {-# LANGUAGE RankNTypes                #-}
@@ -100,7 +101,7 @@ data Versioned m versionData = Versioned
   -- |
   -- Return @True@ if we can run the client's @versionData@.
   --
-  -- TODO: provide a feedback, e.g.
+  -- TODO: provide a feedback
   , agreeOnVersionedData :: versionData -> Bool
   }
 
@@ -185,7 +186,7 @@ instance Protocol (Control m) where
   exclusionLemma_NobodyAndServerHaveAgency TokDone tok = case tok of {}
 
 
-encodeCtrlMsg :: forall (pr :: PeerRole) m st st'.
+encodeCtrlMsg :: forall m st st'.
                  Message (Control m) st st'
               -> CBOR.Encoding
 encodeCtrlMsg (MsgCtrlReq vs) =
@@ -268,7 +269,7 @@ clientCtrlPeer versions =
     -- send versions which we support
       Yield (ClientAgency TokInit) (MsgCtrlReq (Map.keys versions))
     -- await for a replay with a chosen version number
-    $ Await (ServerAgency TokResp) $ \msg -> case msg of
+    $ Await (ServerAgency TokResp) $ \case
         MsgCtrlFail e -> Effect $ throwM $ MuxError {
               errorType  = MuxControlNoMatchingVersion,
               errorMsg   = T.unpack e,
@@ -285,7 +286,7 @@ clientCtrlPeer versions =
             Just version ->
               -- send version to remote peer and await if it agrees on it
                 Yield (ClientAgency TokData) (MsgCtrlData version)
-              $ Await (ServerAgency TokConfirm) $ \msg -> case msg of
+              $ Await (ServerAgency TokConfirm) $ \case
                   MsgCtrlAgree    -> Done TokDone (runVersionData version)
                   MsgCtrlDisagree ->
                     Effect $ throwM $ MuxError {
@@ -335,7 +336,7 @@ serverCtrlPeer versions =
 -- @'decodeCtrlMsg'@ on incomming data.
 --
 runCtrlPeer
-  :: forall ps (st :: ps) pr bytes m a .
+  :: forall pr m a.
      ( MonadThrow m
      , MonadST m
      )
@@ -355,7 +356,7 @@ runCtrlPeer versions channel@Channel{send} =
 
     go _        _ (Done _ x) = return x
 
-    go trailing ctx (Yield stok msg k) = do
+    go trailing ctx (Yield _ msg k) = do
       send (toLazyByteString $ CBOR.toBuilder $ encodeCtrlMsg msg)
       go trailing (nextCtx ctx msg) k
 
@@ -370,15 +371,15 @@ runCtrlPeer versions channel@Channel{send} =
                DecoderCtx st'
             -> Message (Control m) st' st''
             -> DecoderCtx st''
-    nextCtx _                     MsgCtrlReq{}    = DecoderNegotateCtx
-    nextCtx _                     (MsgCtrlResp v) = DecoderAgreeCtx (v `Map.lookup` versions)
-    nextCtx _                     MsgCtrlFail{}   = DecoderDoneCtx
-    nextCtx (DecoderAgreeCtx ctx) MsgCtrlData{}   = DecoderAgreeCtx ctx
-    nextCtx _                     MsgCtrlAgree{}  = DecoderDoneCtx
-    nextCtx _                     MsgCtrlAgree{}  = DecoderDoneCtx
+    nextCtx _                     MsgCtrlReq{}      = DecoderNegotateCtx
+    nextCtx _                     (MsgCtrlResp v)   = DecoderAgreeCtx (v `Map.lookup` versions)
+    nextCtx _                     MsgCtrlFail{}     = DecoderDoneCtx
+    nextCtx (DecoderAgreeCtx ctx) MsgCtrlData{}     = DecoderAgreeCtx ctx
+    nextCtx _                     MsgCtrlAgree{}    = DecoderDoneCtx
+    nextCtx _                     MsgCtrlDisagree{} = DecoderDoneCtx
 
     convertCborDecoder
-      :: forall x st0.
+      :: forall st0.
         (forall s. CBOR.Decoder s (SomeMessage st0))
       -> m (DecodeStep ByteString CBOR.DeserialiseFailure m (SomeMessage st0))
     convertCborDecoder cborDecode =
@@ -393,11 +394,9 @@ runCtrlClient
   :: forall m ptcl.
      ( MonadThrow m
      , MonadST m
-     , Eq ptcl
-     , Show ptcl
      )
   => Map Word32 (Version m)
-  -> MuxBearer ptcl m
+  -> MuxBearer m
   -> m ()
 runCtrlClient versions bearer = 
   let channel = muxBearerAsChannel bearer ModeInitiator
@@ -412,11 +411,9 @@ runCtrlServer
   :: forall m ptcl.
      ( MonadThrow m
      , MonadST m
-     , Eq ptcl
-     , Show ptcl
      )
   => Map Word32 (Version m)
-  -> MuxBearer ptcl m
+  -> MuxBearer m
   -> m ()
 runCtrlServer versions bearer = 
   let channel = muxBearerAsChannel bearer ModeInitiator
@@ -427,11 +424,8 @@ runCtrlServer versions bearer =
 -- protocol.
 --
 muxBearerAsChannel
-  :: ( MonadThrow m
-     , Eq ptcl
-     , Show ptcl
-     )
-  => MuxBearer ptcl m
+  :: MonadThrow m
+  => MuxBearer m
   -> MiniProtocolMode
   -> Channel m ByteString
 muxBearerAsChannel bearer mode = Channel {send, recv}
