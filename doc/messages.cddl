@@ -70,8 +70,8 @@ pingPongMsgDone = 2
 ; ouroboros-network/src/Ouroboros/Network/Protocol/BlockFetch/Codec.hs
 
 blockFetchMessage
-;    = msgRequestRange
-     = msgClientDone
+     = msgRequestRange
+     / msgClientDone
      / msgStartBatch
      / msgNoBlocks
 ;     / msgBlock
@@ -84,8 +84,13 @@ msgNoBlocks     = [3]
 msgBlock        = [4, bfBody]
 msgBatchDone    = [5]
 
-bfBody          = bytes .cbor any
-bfPoint         = bytes .cbor any
+; bfPoint          = [2, slotNo, chainHash] ; this is what the code suggests
+bfPoint           = [slotNo, chainHash]     ; his is what is see ?
+slotNo          = uint ; word64
+chainHash       = [0]  ; this is the representation of (GenesisHash :: ChainHash BlockHeader)
+
+bfBody         = bytes .cbor any
+
 
 ; Transaction Submission Protocol
 ; reference implementation of the codec in

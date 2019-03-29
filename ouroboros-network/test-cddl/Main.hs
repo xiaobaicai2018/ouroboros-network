@@ -23,14 +23,15 @@ import Ouroboros.Network.Testing.ConcreteBlock
 
 import Network.TypedProtocol.Codec
 
-import System.Exit (ExitCode(ExitSuccess))
+import System.Exit (ExitCode(..))
 import System.Process.ByteString.Lazy
 import Control.Monad
 import Control.Exception.Base (throw)
 import Data.ByteString.Lazy  as BS
-import Data.ByteString.Lazy.Char8 as Char8 (putStrLn)
+import Data.ByteString.Lazy.Char8 as Char8 (putStrLn, unpack)
 import qualified Codec.Serialise.Class as Serialise
 import Codec.CBOR.Decoding (decodeWord, decodeListLenOf, decodeBytes)
+import Codec.Serialise (serialise)
 import Codec.CBOR.Read
 import GHC.Stack (HasCallStack)
 
@@ -47,10 +48,19 @@ diag2cborCmd = "./diag2cbor.rb"
 
 generateAndDecode :: IO ()
 generateAndDecode = do
-    (ExitSuccess, diag, _) <- readProcessWithExitCode cddlCmd [cddlSpec, "generate"] BS.empty
-    Char8.putStrLn diag
-    (ExitSuccess, bytes, _) <- readProcessWithExitCode diag2cborCmd ["-"] diag
-    decodeMsg $ decodeTopTerm bytes
+    res1 <- readProcessWithExitCode cddlCmd [cddlSpec, "generate"] BS.empty
+    case res1 of
+        (ExitFailure _, _, err) -> error $ Char8.unpack err
+        (ExitSuccess, diag, _) -> do
+            Char8.putStrLn diag
+            res2 <- readProcessWithExitCode diag2cborCmd ["-"] diag
+            case res2 of
+                (ExitFailure _ , _, err) -> error $ Char8.unpack err
+                (ExitSuccess, bytes, _) -> do
+                    decodeMsg $ decodeTopTerm bytes
+
+debugEncode :: Serialise.Serialise a => a -> IO ()
+debugEncode = print .  BS.unpack . serialise
 
 decodeFile :: FilePath -> IO ()
 decodeFile f =
