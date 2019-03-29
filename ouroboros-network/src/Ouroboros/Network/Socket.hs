@@ -119,16 +119,13 @@ runNetworkNodeWithSocket'
   => NetworkInterface ptcl AddrInfo IO
   -> Maybe (Maybe SomeException -> IO ())
   -> IO (NetworkNode AddrInfo IO)
-runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions, protocols} k = do
+runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions} k = do
       (sd, hdl) <- startNode
       return $ NetworkNode {
           connectTo,
           killNode  = closeConn sd hdl
         }
     where
-      mpds :: Mx.SomeVersion -> Maybe (Mx.MiniProtocolDescriptions ptcl IO)
-      mpds sv = (miniProtocolDescription . ) <$> protocols sv
-
       startNode :: IO (Socket, Async ())
       startNode =
           bracketOnError
@@ -151,7 +148,7 @@ runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions, protocol
           larval sd = do
             bearer <- socketAsMuxBearer sd
             Mx.muxBearerSetState bearer Mx.Connected
-            Mx.muxStart knownVersions mpds bearer Mx.StyleServer k
+            Mx.runCtrlServer knownVersions bearer
 
           watcher sd aid = do
             res_e <- waitCatch aid
@@ -174,7 +171,7 @@ runNetworkNodeWithSocket' NetworkInterface {nodeAddress, knownVersions, protocol
               hdl <- async $ do
                 bearer <- socketAsMuxBearer sd
                 Mx.muxBearerSetState bearer Mx.Connected
-                Mx.muxStart knownVersions mpds bearer Mx.StyleClient k
+                Mx.runCtrlClient knownVersions bearer
               return $ Connection {
                   terminate = closeConn sd hdl,
                   observe   = either Just (const Nothing) <$> waitCatch hdl

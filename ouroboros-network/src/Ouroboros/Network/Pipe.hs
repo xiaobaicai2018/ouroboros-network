@@ -25,7 +25,6 @@ import           System.IO (Handle, hClose, hFlush)
 import qualified Ouroboros.Network.Mux as Mx
 import           Ouroboros.Network.Mux.Types (MuxBearer)
 import qualified Ouroboros.Network.Mux.Types as Mx
-import qualified Ouroboros.Network.Mux.Control as Mx
 import qualified Ouroboros.Network.Mux.Interface as Mx
 
 
@@ -110,12 +109,9 @@ pipeAsMuxBearer ctx = do
 
 runNetworkNodeWithPipe
     :: (Mx.ProtocolEnum ptcl, Ord ptcl, Enum ptcl, Bounded ptcl)
-    => [Mx.SomeVersion]
-    -> (Mx.SomeVersion -> Maybe (ptcl -> Mx.MuxPeer IO))
-    -> Mx.MuxStyle
+    => (ptcl -> Mx.MuxPeer IO)
     -> PipeCtx
     -> IO ()
-runNetworkNodeWithPipe knownMuxVersions protocols style ctx = do
-    let  mpds sv = (Mx.miniProtocolDescription . ) <$> protocols sv
+runNetworkNodeWithPipe protocols ctx = do
     bearer <- pipeAsMuxBearer ctx
-    void $ async $ Mx.muxStart knownMuxVersions mpds bearer style Nothing
+    void $ async $ Mx.muxStart (Mx.miniProtocolDescription . protocols) bearer Nothing
