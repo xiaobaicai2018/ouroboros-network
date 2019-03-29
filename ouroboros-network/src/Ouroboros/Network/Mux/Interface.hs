@@ -21,6 +21,8 @@ import qualified Codec.CBOR.Read     as CBOR
 import           Control.Exception (SomeException, bracket)
 import           Data.ByteString.Lazy (ByteString)
 import           Data.Functor (void)
+import           Data.Map (Map)
+import           Data.Word (Word32)
 import           Numeric.Natural (Natural)
 
 import           Control.Monad.Class.MonadAsync ( MonadAsync )
@@ -99,19 +101,15 @@ data NetworkInterface ptcl addr m = NetworkInterface {
       -- listen for incoming connections.  Some bearers do not have a notion of
       -- address.
       --
-      nodeAddress      :: addr,
+      nodeAddress :: addr,
 
       -- |
       -- List of mux versions that we understand
       --
-      knownVersions :: [SomeVersion],
-
-      -- |
-      -- Map of protocols that we run.  @'SomeVersion'@ will be one of the
-      -- @'knownVersions'@
-      --
-      protocols        :: (SomeVersion -> Maybe (ptcl -> MuxPeer m))
+      knownVersions :: Map Word32 (Version m)
     }
+
+
 
 -- | Low level network interface.  It can be intiatiated using a socket, pair
 -- of pipes or a pair queues.
