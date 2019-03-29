@@ -215,10 +215,10 @@ data MuxError = MuxError {
 data MuxErrorType = MuxUnknownMiniProtocol
                   | MuxDecodeError
                   | MuxBearerClosed
-                  | MuxControlUnknownMessage
                   | MuxControlUnknownVersion
                   | MuxControlNoMatchingVersion
                   | MuxControlProtocolError
+                  | MuxControlDisagreed
                   deriving (Show, Eq)
 
 instance Exception MuxError where

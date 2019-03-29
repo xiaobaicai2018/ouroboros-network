@@ -8,6 +8,8 @@ module Ouroboros.Network.Codec
   , DeserialiseFailure
   , mkCodecCborLazyBS
   , mkCodecCborStrictBS
+  , toLazyByteString
+  , convertCborDecoderLBS
   ) where
 
 import           Control.Monad.ST
