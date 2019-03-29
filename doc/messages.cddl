@@ -74,7 +74,7 @@ blockFetchMessage
      / msgClientDone
      / msgStartBatch
      / msgNoBlocks
-;     / msgBlock
+     / msgBlock
      /msgBatchDone
 
 msgRequestRange = [0, bfPoint, bfPoint]
@@ -89,7 +89,7 @@ bfPoint           = [slotNo, chainHash]     ; his is what is see ?
 slotNo          = uint ; word64
 chainHash       = [0]  ; this is the representation of (GenesisHash :: ChainHash BlockHeader)
 
-bfBody         = bytes .cbor any
+bfBody         = tstr
 
 
 ; Transaction Submission Protocol
