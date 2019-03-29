@@ -71,11 +71,11 @@ pingPongMsgDone = 2
 
 blockFetchMessage
 ;    = msgRequestRange
-    = msgStartBatch
-    / msgNoBlocks
-;    / msgBlock
-    / msgBatchDone
-    / msgClientDone
+     = msgClientDone
+     / msgStartBatch
+     / msgNoBlocks
+;     / msgBlock
+     /msgBatchDone
 
 msgRequestRange = [0, bfPoint, bfPoint]
 msgClientDone   = [1]

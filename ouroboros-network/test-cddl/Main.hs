@@ -19,14 +19,16 @@ import Ouroboros.Network.Protocol.PingPong.Codec (codecPingPong)
 import Network.TypedProtocol.PingPong.Type as PingPong
 import Ouroboros.Network.Protocol.BlockFetch.Codec (codecBlockFetch)
 import Ouroboros.Network.Protocol.BlockFetch.Type as BlockFetch
-import  Ouroboros.Network.Testing.ConcreteBlock 
+import Ouroboros.Network.Testing.ConcreteBlock 
 
 import Network.TypedProtocol.Codec
 
-import System.Process
+import System.Exit (ExitCode(ExitSuccess))
+import System.Process.ByteString.Lazy
 import Control.Monad
 import Control.Exception.Base (throw)
-import Data.ByteString.Lazy  as BS (ByteString, readFile, hGetContents)
+import Data.ByteString.Lazy  as BS
+import Data.ByteString.Lazy.Char8 as Char8 (putStrLn)
 import qualified Codec.Serialise.Class as Serialise
 import Codec.CBOR.Decoding (decodeWord, decodeListLenOf, decodeBytes)
 import Codec.CBOR.Read
@@ -35,13 +37,20 @@ import GHC.Stack (HasCallStack)
 main :: IO ()
 main = replicateM_ 25 generateAndDecode 
 
+cddlCmd :: FilePath
+cddlCmd = "./cddl"
+cddlSpec :: FilePath
+cddlSpec = "../doc/messages.cddl"
+
+diag2cborCmd :: FilePath
+diag2cborCmd = "./diag2cbor.rb"
+
 generateAndDecode :: IO ()
 generateAndDecode = do
-    (_, Just hout, _, _) <- createProcess shellProcess
-    BS.hGetContents hout >>= decodeMsg . decodeTopTerm
-    where
-       shellProcess = (shell "./cddl messages.cddl generate  | ./diag2cbor.rb -")
-                             { std_out = CreatePipe }
+    (ExitSuccess, diag, _) <- readProcessWithExitCode cddlCmd [cddlSpec, "generate"] BS.empty
+    Char8.putStrLn diag
+    (ExitSuccess, bytes, _) <- readProcessWithExitCode diag2cborCmd ["-"] diag
+    decodeMsg $ decodeTopTerm bytes
 
 decodeFile :: FilePath -> IO ()
 decodeFile f =
@@ -55,22 +64,14 @@ instance Serialise.Serialise DummyBytes where
     decode = decodeBytes >> return DummyBytes
 type Body = DummyBytes
 
-{-
-data Header = Header
-instance Serialise.Serialise Header where
-    encode _ = error "encode Serialise Header"
-    decode = decodeBytes >> return Header
-
-instance HasHeader Header
-instance StandardHash Header
--}
-
 -- | Split the ByteString into the tag-word and the rest.
 decodeTopTerm :: ByteString -> (Word, ByteString)
 decodeTopTerm input
     = case deserialiseFromBytes (decodeListLenOf 2 >> decodeWord) input of
         Right (bs,tag) -> (tag,bs)
         Left err -> throw err
+
+--todo proper error reporting !
 
 decodeMsg :: HasCallStack => (Word, ByteString) -> IO ()
 decodeMsg (tag, input) = case tag of

@@ -190,7 +190,17 @@ test-suite test-cddl
   main-is:             Main.hs
   other-modules:       Ouroboros.Network.Protocol.ChainSync.Codec
                        Ouroboros.Network.Protocol.ChainSync.Type
---                       Ouroboros.Network.Protocol.PingPong.Codec
+                       Ouroboros.Network.Block
+                       Ouroboros.Network.Chain
+                       Ouroboros.Network.ChainFragment
+                       Ouroboros.Network.Codec
+                       Ouroboros.Network.Protocol.BlockFetch.Codec
+                       Ouroboros.Network.Protocol.BlockFetch.Type
+                       Ouroboros.Network.Protocol.ChainSync.Codec
+                       Ouroboros.Network.Protocol.ChainSync.Type
+                       Ouroboros.Network.Protocol.PingPong.Codec
+                       Ouroboros.Network.Protocol.ReqResp.Codec
+                       Ouroboros.Network.Testing.ConcreteBlock
                        Ouroboros.Network.Block
                        Ouroboros.Network.Chain
                        Ouroboros.Network.Codec
@@ -215,7 +225,8 @@ test-suite test-cddl
                        mtl,
                        network,
                        pipes,
-                       process,
+--                       process,
+                       process-extras,
                        QuickCheck,
                        serialise,
                        tasty,
