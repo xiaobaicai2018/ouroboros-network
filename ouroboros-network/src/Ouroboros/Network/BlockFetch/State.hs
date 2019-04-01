@@ -216,8 +216,8 @@ fetchLogicIterationAct decisions =
 -- and it is not necessary to determine exactly what changed, just that there
 -- was some change.
 --
-data FetchTriggerVariables peer header block m = FetchTriggerVariables {
-       readStateCurrentChain    :: STM m (ChainFragment block),
+data FetchTriggerVariables peer header block m = FetchTriggerVariables { -- TODO remove block?
+       readStateCurrentChain    :: STM m (ChainFragment header),
        readStateCandidateChains :: STM m (Map peer (ChainFragment header)),
        readStatePeerStatus      :: STM m (Map peer PeerFetchStatus)
      }
@@ -255,7 +255,7 @@ initialFetchStateFingerprint =
 -- of 'fetchStatePeerStates' and 'fetchStatePeerReqVars'.
 --
 data FetchStateSnapshot peer header block m = FetchStateSnapshot {
-       fetchStateCurrentChain  :: ChainFragment block,
+       fetchStateCurrentChain  :: ChainFragment header,
        fetchStatePeerChains    :: Map peer (ChainFragment header),
        fetchStatePeerStates    :: Map peer (PeerFetchStatus, PeerFetchInFlight header),
        fetchStatePeerGSVs      :: Map peer PeerGSV,
@@ -264,8 +264,9 @@ data FetchStateSnapshot peer header block m = FetchStateSnapshot {
        fetchStateFetchMode     :: FetchMode
      }
 
-readStateVariables :: (MonadSTM m, Eq peer, Eq (Point header),
-                       HasHeader header, HasHeader block)
+readStateVariables :: (MonadSTM m, Eq peer,
+                       HasHeader header, HasHeader block,
+                       HeaderHash header ~ HeaderHash block)
                    => FetchTriggerVariables peer header block m
                    -> FetchNonTriggerVariables peer header block m
                    -> FetchStateFingerprint peer header block
@@ -283,7 +284,7 @@ readStateVariables FetchTriggerVariables{..}
     -- Construct the change detection fingerprint
     let fetchStateFingerprint' =
           FetchStateFingerprint
-            (ChainFragment.headPoint fetchStateCurrentChain)
+            (castPoint <$> ChainFragment.headPoint fetchStateCurrentChain)
             (Map.map ChainFragment.headPoint fetchStatePeerChains)
             fetchStatePeerStatus
 

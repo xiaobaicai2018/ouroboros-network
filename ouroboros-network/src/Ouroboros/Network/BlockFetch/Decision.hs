@@ -42,13 +42,14 @@ import           Ouroboros.Network.BlockFetch.DeltaQ
                    , calculatePeerFetchInFlightLimits )
 
 
+-- TODO remove block?
 data FetchDecisionPolicy header block = FetchDecisionPolicy {
        maxInFlightReqsPerPeer  :: Word,  -- A protocol constant.
 
        maxConcurrencyBulkSync  :: Word,
        maxConcurrencyDeadline  :: Word,
 
-       plausibleCandidateChain :: ChainFragment block
+       plausibleCandidateChain :: ChainFragment header
                                -> ChainFragment header -> Bool,
 
        compareCandidateChains  :: ChainFragment header
@@ -109,7 +110,7 @@ fetchDecisions
       HeaderHash header ~ HeaderHash block)
   => FetchDecisionPolicy header block
   -> FetchMode
-  -> ChainFragment block
+  -> ChainFragment header
   -> (Point block -> Bool)
   -> [(ChainFragment header, PeerInfo header extra)]
   -> [(FetchDecision (FetchRequest header), PeerInfo header extra)]
