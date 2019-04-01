@@ -57,14 +57,17 @@ generateAndDecode = do
             case res2 of
                 (ExitFailure _ , _, err) -> error $ Char8.unpack err
                 (ExitSuccess, bytes, _) -> do
-                    decodeMsg $ decodeTopTerm bytes
+                    decodeMsg (codecChainSync :: MonoCodec (ChainSync DummyBytes DummyBytes))
+                       $ decodeTopTerm bytes
 
 debugEncode :: Serialise.Serialise a => a -> IO ()
 debugEncode = print .  BS.unpack . serialise
 
+{-
 decodeFile :: FilePath -> IO ()
 decodeFile f =
     BS.readFile f >>= decodeMsg . decodeTopTerm
+-}
 
 type MonoCodec x = Codec x Codec.CBOR.Read.DeserialiseFailure IO ByteString
 
@@ -83,14 +86,18 @@ decodeTopTerm input
 
 --todo proper error reporting !
 
-decodeMsg :: HasCallStack => (Word, ByteString) -> IO ()
-decodeMsg (tag, input) = case tag of
+decodeMsg
+    :: HasCallStack
+    => MonoCodec (ChainSync DummyBytes DummyBytes)
+    -> (Word, ByteString)
+    -> IO ()
+decodeMsg argument (tag, input) = case tag of
     0 -> tryParsers "chainSync"  chainSyncParsers
     1 -> tryParsers "reqResp"    reqRespParsers
     2 -> tryParsers "pingPong"   pingPongParsers
     3 -> tryParsers "blockFetch" blockFetchParsers
-    4 -> error "txSubmissionMessage"
-    5 -> error "muxControlMessage"
+    4 -> return () -- "txSubmissionMessage" in branch
+    5 -> return () -- error "muxControlMessage" in branch
     _ -> error "unkown tag"
     where
         tryParsers :: String -> [IO Bool] -> IO ()
@@ -104,7 +111,9 @@ decodeMsg (tag, input) = case tag of
              -> PeerHasAgency pr st -> IO Bool
         run codec state = runCodec ((decode codec) state) input
   
-        runCS = run (codecChainSync :: MonoCodec (ChainSync DummyBytes DummyBytes))
+        runCS = run local       {- works fine -}
+        local = (codecChainSync :: MonoCodec (ChainSync DummyBytes DummyBytes))
+--        runCS = run argument  {- type error -}
         chainSyncParsers = [
               runCS (ClientAgency CS.TokIdle)
             , runCS (ServerAgency (CS.TokNext TokCanAwait))
