@@ -18,6 +18,7 @@ import           Test.Tasty.QuickCheck
 import           Ouroboros.Network.Chain (Chain, ChainUpdate (..), Point (..),
                      genesisPoint, headPoint, pointOnChain)
 import qualified Ouroboros.Network.Chain as Chain
+import qualified Ouroboros.Network.ChainFragment as CF
 import           Ouroboros.Network.ChainProducerState
 import           Ouroboros.Network.Testing.ConcreteBlock (Block (..))
 
@@ -97,7 +98,7 @@ prop_update_next_lookup (ChainProducerStateTest c rid p) =
 --
 prop_producer_sync1 :: TestBlockChainAndUpdates -> Bool
 prop_producer_sync1 (TestBlockChainAndUpdates c us) =
-    let producer0        = initChainProducerState c
+    let producer0        = initChainProducerState' c
         (producer1, rid) = initReader (Chain.headPoint c) producer0
         Just producer    = applyChainUpdates us producer1
 
@@ -105,7 +106,7 @@ prop_producer_sync1 (TestBlockChainAndUpdates c us) =
         consumerUpdates  = iterateReaderUntilDone rid producer
         Just consumer    = Chain.applyChainUpdates consumerUpdates consumer0
      in
-        consumer == producerChain producer
+        consumer == producerChain' producer
   where
     iterateReaderUntilDone rid = unfoldr (readerInstruction rid)
 
@@ -115,13 +116,13 @@ prop_producer_sync1 (TestBlockChainAndUpdates c us) =
 --
 prop_producer_sync2 :: TestBlockChainAndUpdates -> [Bool] -> Bool
 prop_producer_sync2 (TestBlockChainAndUpdates chain0 us0) choices =
-    let producer0        = initChainProducerState chain0
+    let producer0        = initChainProducerState' chain0
         (producer1, rid) = initReader (Chain.headPoint chain0) producer0
 
         consumer0        = chain0
         (producer,
          consumer)       = go rid producer1 consumer0 choices us0
-     in consumer == producerChain producer
+     in consumer == producerChain' producer
   where
     -- apply update to producer
     go rid p c (False:bs) (u:us) =
@@ -147,7 +148,7 @@ prop_producer_sync2 (TestBlockChainAndUpdates chain0 us0) choices =
 
 prop_switchFork :: ChainProducerStateForkTest -> Bool
 prop_switchFork (ChainProducerStateForkTest cps f) =
-  let cps' = switchFork f cps
+  let cps' = switchFork (CF.fromChain f) cps
   in
       invChainProducerState cps'
       && all
@@ -211,7 +212,7 @@ instance Arbitrary ChainProducerStateTest where
     p <- if n == 0
          then return genesisPoint
          else mkRollbackPoint c <$> choose (0, n)
-    return (ChainProducerStateTest (ChainProducerState c rs) rid p)
+    return (ChainProducerStateTest (ChainProducerState (CF.fromChain c) rs) rid p)
 
 data ChainProducerStateForkTest
     = ChainProducerStateForkTest
@@ -224,7 +225,8 @@ instance Arbitrary ChainProducerStateForkTest where
     TestChainFork _ c f <- arbitrary
     let l = Chain.length c
     rs <- fixupReaderStates <$> listOf (genReaderState l c)
-    return $ ChainProducerStateForkTest (ChainProducerState c rs) f
+    let c' = CF.fromChain c
+    return $ ChainProducerStateForkTest (ChainProducerState c' rs) f
 
   shrink (ChainProducerStateForkTest (ChainProducerState c rs) f)
     -- shrink readers
@@ -236,8 +238,9 @@ instance Arbitrary ChainProducerStateForkTest where
        | TestBlockChain f' <- shrink (TestBlockChain f)
        ]
     -- shrink chain and fix up readers
-    ++ [ ChainProducerStateForkTest (ChainProducerState c' (fixupReaderPointer c' `map` rs)) f
-       | TestBlockChain c' <- shrink (TestBlockChain c)
+    ++ [ ChainProducerStateForkTest (ChainProducerState (CF.fromChain c')
+                                                        (fixupReaderPointer c' `map` rs)) f
+       | TestBlockChain c' <- shrink (TestBlockChain (CF.toChain c))
        ]
     where
       fixupReaderPointer :: Chain Block -> ReaderState Block -> ReaderState Block

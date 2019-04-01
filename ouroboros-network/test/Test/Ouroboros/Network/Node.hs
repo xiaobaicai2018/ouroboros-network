@@ -39,6 +39,8 @@ import           Ouroboros.Network.Time (microsecondsToDiffTime)
 import           Ouroboros.Network.Block
 import           Ouroboros.Network.Chain (Chain (..), chainToList)
 import qualified Ouroboros.Network.Chain as Chain
+import           Ouroboros.Network.ChainFragment (ChainFragment)
+import qualified Ouroboros.Network.ChainFragment as CF
 import           Ouroboros.Network.ChainProducerState (ChainProducerState (..))
 import           Ouroboros.Network.Node
 import           Ouroboros.Network.Testing.ConcreteBlock as ConcreteBlock
@@ -135,11 +137,11 @@ coreToRelaySim :: ( MonadSTM m
                   , MonadTimer m
                   )
                => Bool              -- ^ two way subscription
-               -> Chain Block
+               -> ChainFragment Block
                -> DiffTime          -- ^ slot duration
                -> DiffTime          -- ^ core transport delay
                -> DiffTime          -- ^ relay transport delay
-               -> Probe m (NodeId, Chain Block)
+               -> Probe m (NodeId, ChainFragment Block)
                -> m ()
 coreToRelaySim duplex chain slotDuration coreTrDelay relayTrDelay probe = do
   donevar <- newTVarM False
@@ -148,7 +150,7 @@ coreToRelaySim duplex chain slotDuration coreTrDelay relayTrDelay probe = do
     else createOneWaySubscriptionChannels coreTrDelay relayTrDelay
 
   void $ fork $ do
-    cps <- coreNode (CoreId 0) slotDuration (Chain.toOldestFirst chain) coreChans
+    cps <- coreNode (CoreId 0) slotDuration (CF.toOldestFirst chain) coreChans
     void $ fork $ observeChainProducerState (CoreId 0) probe cps
   void $ fork $ void $ do
     cps <- relayNode (RelayId 0) Genesis relayChans
@@ -192,19 +194,20 @@ instance Arbitrary TestNodeSim where
 -- @'Genesis'@ chain, hence the core node is a single source of truth.
 prop_coreToRelay :: TestNodeSim -> Property
 prop_coreToRelay (TestNodeSim chain slotDuration coreTrDelay relayTrDelay) =
-  let probes  = Sim.runSimOrThrow $ withProbe $
-                  coreToRelaySim False chain
+  let frag    = CF.fromChain chain
+      probes  = Sim.runSimOrThrow $ withProbe $
+                  coreToRelaySim False frag
                                  slotDuration coreTrDelay relayTrDelay
-      dict    :: Map NodeId [Chain Block]
+      dict    :: Map NodeId [ChainFragment Block]
       dict    = partitionProbe probes
-      mchain1 :: Maybe (Chain Block)
+      mchain1 :: Maybe (ChainFragment Block)
       mchain1 = RelayId 0 `Map.lookup` dict >>= listToMaybe
   in counterexample (show mchain1) $
-    if Chain.null chain
+    if CF.null frag
         -- when a chain is null, the relay observer will never be triggered,
         -- since its chain never is never updated
       then property $ isNothing mchain1
-      else mchain1 === Just chain
+      else mchain1 === Just frag
 
 -- Node graph: c → r → r
 coreToRelaySim2 :: ( MonadSTM m
@@ -214,14 +217,14 @@ coreToRelaySim2 :: ( MonadSTM m
                    , MonadTime m
                    , MonadTimer m
                    )
-                => Chain Block
+                => ChainFragment Block
                 -> DiffTime
                 -- ^ slot length
                 -> DiffTime
                 -- ^ core transport delay
                 -> DiffTime
                 -- ^ relay transport delay
-                -> Probe m (NodeId, Chain Block)
+                -> Probe m (NodeId, ChainFragment Block)
                 -> m ()
 coreToRelaySim2 chain slotDuration coreTrDelay relayTrDelay probe = do
   donevar <- newTVarM False
@@ -229,10 +232,10 @@ coreToRelaySim2 chain slotDuration coreTrDelay relayTrDelay probe = do
   (r1r2, r2r1) <- createOneWaySubscriptionChannels relayTrDelay relayTrDelay
 
   void $ fork $ void $ do
-    cps <- coreNode (CoreId 0) slotDuration (Chain.toOldestFirst chain) cr1
+    cps <- coreNode (CoreId 0) slotDuration (CF.toOldestFirst chain) cr1
     void $ fork $ observeChainProducerState (CoreId 0) probe cps
   void $ fork $ void $ do
-    cps <- relayNode (RelayId 1) Genesis(r1c <> r1r2)
+    cps <- relayNode (RelayId 1) Genesis (r1c <> r1r2)
     void $ fork $ observeChainProducerState (RelayId 1) probe cps
   void $ fork $ void $ do
     cps <- relayNode (RelayId 2) Genesis r2r1
@@ -250,8 +253,9 @@ coreToRelaySim2 chain slotDuration coreTrDelay relayTrDelay probe = do
 
 prop_coreToRelay2 :: TestNodeSim -> Property
 prop_coreToRelay2 (TestNodeSim chain slotDuration coreTrDelay relayTrDelay) =
-  let probes  = Sim.runSimOrThrow $ withProbe $
-                  coreToRelaySim2 chain slotDuration coreTrDelay relayTrDelay
+  let frag    = CF.fromChain chain
+      probes  = Sim.runSimOrThrow $ withProbe $
+                  coreToRelaySim2 frag slotDuration coreTrDelay relayTrDelay
       dict    = partitionProbe probes
       mchain1 = RelayId 1 `Map.lookup` dict >>= listToMaybe
       mchain2 = RelayId 2 `Map.lookup` dict >>= listToMaybe
@@ -261,9 +265,9 @@ prop_coreToRelay2 (TestNodeSim chain slotDuration coreTrDelay relayTrDelay) =
         -- since its chain never is never updated
       then isNothing mchain1 .&&. isNothing mchain2
       else
-            mchain1 === Just chain
+            mchain1 === Just frag
         .&&.
-            mchain2 === Just chain
+            mchain2 === Just frag
 
 
 data TestNetworkGraph = TestNetworkGraph Graph [(Int, Chain Block)]
@@ -315,7 +319,7 @@ networkGraphSim :: forall m.
                 -> DiffTime          -- ^ slot duration
                 -> DiffTime          -- ^ core transport delay
                 -> DiffTime          -- ^ relay transport delay
-                -> Probe m (NodeId, Chain Block)
+                -> Probe m (NodeId, ChainFragment Block)
                 -> m ()
 networkGraphSim (TestNetworkGraph g cs) slotDuration coreTrDelay relayTrDelay probe = do
   let vs = vertices g
@@ -375,7 +379,7 @@ prop_networkGraph (NetworkTest g@(TestNetworkGraph graph cs) slotDuration coreTr
 
       probes = Sim.runSimOrThrow $ withProbe $
                  networkGraphSim g slotDuration coreTrDelay relayTrDelay
-      dict :: Map NodeId (Chain Block)
+      dict :: Map NodeId (ChainFragment Block)
       dict = Map.mapMaybe listToMaybe (partitionProbe probes)
       chains = Map.elems dict
   in  cover 50 (length vs > 10) "more than 10 vertices"
@@ -397,7 +401,7 @@ prop_networkGraph (NetworkTest g@(TestNetworkGraph graph cs) slotDuration coreTr
     -- centrality](https://en.wikipedia.org/wiki/Closeness_centrality) of
     -- generated graphs; we'd like to have some nodes that are on average very far
     -- from other nodes.
-    $ Map.foldl' (\v c -> foldl' Chain.selectChain c chains == c && v) True dict
+    $ Map.foldl' (\v c -> foldl' CF.selectChainFragment c chains == c && v) True dict
   where
   -- remove two edges: `a -> b` and `b -> a`
   removeEdge :: Bounds -> Edge -> [Edge] -> Graph

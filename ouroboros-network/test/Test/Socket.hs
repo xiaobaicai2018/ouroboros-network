@@ -26,6 +26,8 @@ import           Ouroboros.Network.Socket
 import           Network.TypedProtocol.Driver
 import           Ouroboros.Network.Chain (Chain, ChainUpdate, Point)
 import qualified Ouroboros.Network.Chain as Chain
+import           Ouroboros.Network.ChainFragment (ChainFragment)
+import qualified Ouroboros.Network.ChainFragment as CF
 import qualified Ouroboros.Network.ChainProducerState as CPS
 import           Ouroboros.Network.Channel
 import           Ouroboros.Network.Protocol.ChainSync.Client
@@ -180,8 +182,10 @@ demo chain0 updates = do
     a:_ <- getAddrInfo Nothing (Just "127.0.0.1") (Just "0")
     b:_ <- getAddrInfo Nothing (Just "127.0.0.1") (Just "6061")
 
-    producerVar <- newTVarM (CPS.initChainProducerState chain0)
-    consumerVar <- newTVarM chain0
+    let frag0 = CF.fromChain chain0
+
+    producerVar <- newTVarM (CPS.initChainProducerState frag0)
+    consumerVar <- newTVarM frag0
     consumerDone <- atomically newEmptyTMVar
 
     let Just expectedChain = Chain.applyChainUpdates updates chain0
@@ -216,9 +220,10 @@ demo chain0 updates = do
   where
     checkTip target consumerVar = atomically $ do
           chain <- readTVar consumerVar
-          return (Chain.headPoint chain == target)
+          return (CF.headOrGenPoint chain == target)
 
-    consumerClient :: Point block -> TVar IO (Chain block) -> Client block IO ()
+    consumerClient :: Point block -> TVar IO (ChainFragment block)
+                   -> Client block IO ()
     consumerClient target consChain =
       Client
         { rollforward = \_ -> checkTip target consChain >>= \b ->
@@ -230,8 +235,9 @@ demo chain0 updates = do
         , points = \_ -> pure $ consumerClient target consChain
         }
 
-    consumerInit :: TMVar IO Bool -> Point block -> TVar IO (Chain block)
-                 -> Channel IO BL.ByteString -> IO ()
+    consumerInit :: TMVar IO Bool -> Point block
+                 -> TVar IO (ChainFragment block) -> Channel IO BL.ByteString
+                 -> IO ()
     consumerInit done target consChain channel = do
        let consumerPeer = chainSyncClientPeer (chainSyncClientExample consChain
                                                (consumerClient target consChain))

@@ -61,6 +61,7 @@ module Ouroboros.Network.ChainFragment (
   pointOrGenOnChainFragment,
   successorBlock,
   successorBlock',
+  selectChainFragment,
   lookupBySlot,
   splitAfterSlot,
   splitAfterPoint,
@@ -521,6 +522,19 @@ successorBlock' p c
         _                                         -> Nothing
     | otherwise
     = successorBlock p c
+
+-- | \( O(1) \). Choose the 'ChainFragment' of which the head has the highest
+-- 'BlockNo'.
+selectChainFragment
+  :: HasHeader block
+  => ChainFragment block
+  -> ChainFragment block
+  -> ChainFragment block
+selectChainFragment c1 c2 =
+    if headOrGenBlockNo c1 >= headOrGenBlockNo c2
+    then c1
+    else c2
+
 
 -- | \( O(\log(\min(i,n-i)) \). Split the 'ChainFragment' after the block with
 -- given slot. Or, if there is no block with the given slot in the chain

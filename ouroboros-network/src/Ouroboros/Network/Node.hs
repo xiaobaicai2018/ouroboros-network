@@ -31,17 +31,16 @@ import           Ouroboros.Network.Codec
 
 import           Ouroboros.Network.Time
 import           Ouroboros.Network.Block
-import           Ouroboros.Network.Chain (Chain (..), Point)
-import qualified Ouroboros.Network.Chain as Chain
+import           Ouroboros.Network.Chain (Chain (Genesis), genesisPoint)
+import           Ouroboros.Network.ChainFragment (ChainFragment (..), Point)
+import qualified Ouroboros.Network.ChainFragment as CF
 import           Ouroboros.Network.ChainProducerState (ChainProducerState (..),
-                                                       initChainProducerState,
-                                                       producerChain,
-                                                       switchFork)
-import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSyncId)
+                     initChainProducerState', producerChain, switchFork)
 import           Ouroboros.Network.Protocol.ChainSync.Client
+import           Ouroboros.Network.Protocol.ChainSync.Codec (codecChainSyncId)
+import           Ouroboros.Network.Protocol.ChainSync.Examples
 import           Ouroboros.Network.Protocol.ChainSync.Server
 import           Ouroboros.Network.Protocol.ChainSync.Type
-import           Ouroboros.Network.Protocol.ChainSync.Examples
 -- FIXME bad module name below. They're examples, sure, but they're also
 -- legit useful.
 import           Ouroboros.Network.Testing.ConcreteBlock hiding (fixupBlock)
@@ -59,7 +58,7 @@ longestChainSelection :: forall block m.
                          ( HasHeader block
                          , MonadSTM m
                          )
-                      => [TVar m (Maybe (Chain block))]
+                      => [TVar m (Maybe (ChainFragment block))]
                       -> TVar m (ChainProducerState block)
                       -> m ()
 longestChainSelection candidateChainVars cpsVar =
@@ -69,29 +68,29 @@ longestChainSelection candidateChainVars cpsVar =
     updateCurrentChain = do
       candidateChains <- mapM readTVar candidateChainVars
       cps@ChainProducerState{chainState = chain} <- readTVar cpsVar
-      let -- using foldl' since @Chain.selectChain@ is left biased
-          chain' = foldl' Chain.selectChain chain (catMaybes candidateChains)
-      if Chain.headPoint chain' == Chain.headPoint chain
+      let -- using foldl' since @CF.selectChainFragment@ is left biased
+          chain' = foldl' CF.selectChainFragment chain (catMaybes candidateChains)
+      if CF.headOrGenPoint chain' == CF.headOrGenPoint chain
         then retry
         else writeTVar cpsVar (switchFork chain' cps)
 
 
 chainValidation :: forall block m. (HasHeader block, MonadSTM m)
-                => TVar m (Chain block)
-                -> TVar m (Maybe (Chain block))
+                => TVar m (ChainFragment block)
+                -> TVar m (Maybe (ChainFragment block))
                 -> m ()
 chainValidation peerChainVar candidateChainVar = do
-    st <- atomically (newTVar Chain.genesisPoint)
+    st <- atomically (newTVar genesisPoint)
     forever (atomically (update st))
   where
     update :: TVar m (Point block) -> STM m ()
     update stateVar = do
       peerChain      <- readTVar peerChainVar
       candidatePoint <- readTVar stateVar
-      check (Chain.headPoint peerChain /= candidatePoint)
-      writeTVar stateVar (Chain.headPoint peerChain)
-      let candidateChain | Chain.valid peerChain = Just peerChain
-                         | otherwise             = Nothing
+      check (CF.headOrGenPoint peerChain /= candidatePoint)
+      writeTVar stateVar (CF.headOrGenPoint peerChain)
+      let candidateChain | CF.valid peerChain = Just peerChain
+                         | otherwise          = Nothing
       writeTVar candidateChainVar candidateChain
 
 
@@ -197,19 +196,19 @@ observeChainProducerState
      , MonadSTM m
      )
   => NodeId
-  -> TVar m [(NodeId, Chain block)]
+  -> TVar m [(NodeId, ChainFragment block)]
   -> TVar m (ChainProducerState block)
   -> m ()
 observeChainProducerState nid probe cpsVar = do
-    st <- atomically (newTVar Chain.genesisPoint)
+    st <- atomically (newTVar genesisPoint)
     forever (update st)
   where
     update :: TVar m (Point block) -> m ()
     update stateVar = atomically $ do
       chain  <- producerChain <$> readTVar cpsVar
       curPoint <- readTVar stateVar
-      check (Chain.headPoint chain /= curPoint)
-      writeTVar stateVar (Chain.headPoint chain)
+      check (CF.headOrGenPoint chain /= curPoint)
+      writeTVar stateVar (CF.headOrGenPoint chain)
       modifyTVar probe ((nid, chain):)
 
 data ConsumerId = ConsumerId NodeId Int
@@ -233,7 +232,7 @@ forkRelayKernel :: forall block m.
                 , MonadSTM m
                 , MonadFork m
                 )
-                => [TVar m (Chain block)]
+                => [TVar m (ChainFragment block)]
                 -- ^ These will track the upstream producers.
                 -> TVar m (ChainProducerState block)
                 -- ^ This is tracking the current node and the downstream.
@@ -277,7 +276,7 @@ relayNode nid initChain chans = do
   -- 1. input chains
   upstream <- zipWithM startConsumer [0..] (consumerChans chans)
   -- 2. ChainProducerState
-  cpsVar <- atomically $ newTVar (initChainProducerState initChain)
+  cpsVar <- atomically $ newTVar (initChainProducerState' initChain)
 
   forkRelayKernel upstream cpsVar
 
@@ -294,9 +293,9 @@ relayNode nid initChain chans = do
     -- state and all the reader states, while we could share just the chain).
     startConsumer :: Int
                   -> Channel m (AnyMessage (ChainSync block (Point block)))
-                  -> m (TVar m (Chain block))
+                  -> m (TVar m (ChainFragment block))
     startConsumer cid channel = do
-      chainVar <- atomically $ newTVar Genesis
+      chainVar <- atomically $ newTVar Empty
       let consumer = chainSyncClientPeer (chainSyncClientExample chainVar pureClient)
       void $ fork $ void $ runPeer nullTracer codecChainSyncId (loggingChannel (ConsumerId nid cid) channel) consumer
       return chainVar
@@ -331,7 +330,7 @@ forkCoreKernel :: forall block m.
                -- ^ slot duration
                -> [block]
                -- ^ Blocks to produce (in order they should be produced)
-               -> (Chain block -> block -> block)
+               -> (ChainFragment block -> block -> block)
                -> TVar m (ChainProducerState block)
                -> m ()
 forkCoreKernel slotDuration gchain fixupBlock cpsVar = do
@@ -355,17 +354,17 @@ forkCoreKernel slotDuration gchain fixupBlock cpsVar = do
         then applyGeneratedBlock getBlock
         else return ()
 
-    addBlock :: Chain block -> block -> Chain block
+    addBlock :: ChainFragment block -> block -> ChainFragment block
     addBlock c b =
-      case blockSlot b `compare` Chain.headSlot c of
+      case blockSlot b `compare` CF.headOrGenSlot c of
         -- the block is OK
-        GT -> let r = Chain.addBlock (fixupBlock c b) c in
-              assert (Chain.valid r) r
+        GT -> let r = CF.addBlock (fixupBlock c b) c in
+              assert (CF.valid r) r
         -- the slot @s@ is already taken; replace the previous block
-        EQ -> let c' = Chain.drop 1 c
+        EQ -> let c' = CF.dropNewest 1 c
                   b' = fixupBlock c' b
-                  r  = Chain.addBlock b' c'
-              in assert (Chain.valid r) r
+                  r  = CF.addBlock b' c'
+              in assert (CF.valid r) r
         LT -> error "blockGenerator invariant vaiolation: generated block is for slot in the past"
 
 -- | Core node simulation.  Given a chain it will generate a @block@ at its
@@ -388,5 +387,5 @@ coreNode :: forall m.
      -> m (TVar m (ChainProducerState Block))
 coreNode nid slotDuration gchain chans = do
   cpsVar <- relayNode nid Genesis chans
-  forkCoreKernel slotDuration gchain Concrete.fixupBlock cpsVar
+  forkCoreKernel slotDuration gchain Concrete.fixupBlockCF cpsVar
   return cpsVar
